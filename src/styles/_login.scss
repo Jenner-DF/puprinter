@@ -39,21 +39,10 @@
     border: 1px solid $box-shadow-color;
     padding: 5px 1rem;
   }
-  &__btn {
+  &__btns {
     display: flex;
     gap: 2rem;
     width: 100%;
-    & > * {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      font-family: inherit;
-      width: 100%;
-      border: none;
-      padding: 20px 0;
-      background-color: $color-secondary;
-    }
   }
 }
 .btn-main {

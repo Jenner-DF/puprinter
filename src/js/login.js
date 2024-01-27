@@ -32,11 +32,11 @@ class loginPanel extends Panel {
         class="form__entryfield"
         required
       />
-      <div class="form__btn">
-        <button type="submit" class="form__btn_login btn-main">
+      <div class="form__btns">
+        <button type="submit" class="btn form__btn_login btn__main">
           Login
         </button>
-        <button type="button" class="form__btn_swapform">Register</button>
+        <button type="button" class="btn form__btn_swapform">Register</button>
       </div>
     </div>
   </form>
@@ -69,11 +69,11 @@ class loginPanel extends Panel {
         maxlength="5"
         required
       />
-      <div class="form__btn">
-        <button type="submit" class="form__btn_register btn-main">
+      <div class="form__btns">
+        <button type="submit" class="btn form__btn_register btn__main">
           Register
         </button>
-        <button type="button" class="form__btn_swapform">Login</button>
+        <button type="button" class="btn form__btn_swapform">Login</button>
       </div>
     </div>
   </form>

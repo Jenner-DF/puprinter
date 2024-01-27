@@ -1,4 +1,5 @@
 import icons from "../img/icons.svg";
+import printerloading from "../img/printerloading.gif";
 import PrintForm from "./printForms";
 import { auth, signIn, signup } from "./firebaseConfig";
 import { initPanel } from "./controller";
@@ -54,8 +55,17 @@ export default class Panel {
             <option value="grayscale">Grayscale</option>
           </select>
         </div>
-        <div class="submit"><button>Submit</button></div>
+        <div class="submit"><button type="button" class="openDialog">Submit</button></div>
       </form>
+        <!-- DIALOG -->
+        <dialog class="modal">
+        <div class="modal__section modal__text">
+        </div>
+        <div class="modal__section modal__img">
+        </div>
+        <div class="modal__section modal__btns">
+        </div>
+      </dialog>
     </div>
   </div>`;
   renderHeader(markup, isAdmin = false) {
@@ -128,6 +138,11 @@ export default class Panel {
     const loaderEl = document.querySelector(".loader");
     const fileInput = printForm.querySelector("#file");
     const fileLabel = printForm.querySelector(".file_label");
+    const openDialog = printForm.querySelector(".openDialog");
+    const modal = document.querySelector(".modal");
+    const modText = document.querySelector(".modal__text");
+    const modImg = document.querySelector(".modal__img");
+    const modBtns = document.querySelector(".modal__btns");
     fileInput.addEventListener("change", function () {
       const selectedFile = this.files[0];
       if (selectedFile.type !== "application/pdf")
@@ -135,25 +150,101 @@ export default class Panel {
       fileLabel.textContent = selectedFile.name;
       console.log(selectedFile);
     });
-    printForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    // open modal after clicking submit
+    openDialog.addEventListener("click", async () => {
       try {
         if (!printForm.file.files[0]) throw new Error("No files uploaded yet!");
         if (printForm.file.files[0].type !== "application/pdf")
           throw new Error("Please upload PDF file only.");
-        this.renderSpinner(loaderEl);
-        await PrintForm.createInstance(
+        modal.showModal();
+        //show Price Dialog
+        this.renderSpinner(modImg);
+        const priceFile = await PrintForm._generatePriceAmount(
           printForm.file.files[0],
+          printForm.select_paper.value,
           printForm.select_colored.value,
-          printForm.select_paper.value
+          true
         );
-        this._clear(loaderEl);
-        printForm.reset();
-        fileLabel.textContent = "Upload a PDF file";
+        this._clear(modImg);
+        showPriceDialog(priceFile);
       } catch (e) {
         this.renderError(loaderEl, e);
       }
     });
+    function showPriceDialog(price) {
+      modText.innerHTML = "";
+      modImg.innerHTML = "";
+      modBtns.innerHTML = "";
+      modText.insertAdjacentHTML("afterbegin", `<p>Amount to Pay:</p>`);
+      modImg.insertAdjacentHTML(
+        "afterbegin",
+        `  <p class="modal__img_text">₱${price}</p>`
+      );
+      modBtns.insertAdjacentHTML(
+        "afterbegin",
+        `<button class="btn btn__main btnSubmit">Print</button>
+      <button class="btn closeModal">Cancel</button>`
+      );
+      // generate buttons inside the dialog
+      const btnSubmit = document.querySelector(".btnSubmit");
+      const closeModal = document.querySelector(".closeModal");
+      closeModal.addEventListener("click", () => {
+        modal.close();
+      });
+      //listen for clicking print button inside dialog
+      btnSubmit.addEventListener("click", async () => {
+        modText.innerHTML = "";
+        modImg.innerHTML = "";
+        modBtns.innerHTML = "";
+        modText.insertAdjacentHTML(
+          "afterbegin",
+          `<p>Generating file pin code...</p>`
+        );
+        modImg.insertAdjacentHTML(
+          "afterbegin",
+          `<img src="${printerloading}" alt="Printing Image" />`
+        );
+        //get file pincode, returns pincode of file
+        const getPincodeForm = await PrintForm.createInstance(
+          printForm.file.files[0],
+          printForm.select_colored.value,
+          printForm.select_paper.value
+        );
+        modText.innerHTML = "";
+        modImg.innerHTML = "";
+        modBtns.innerHTML = "";
+        modText.insertAdjacentHTML(
+          "afterbegin",
+          `<p>
+          Please proceed to the machine and enter this code to get your
+          document:
+        </p>`
+        );
+        modImg.insertAdjacentHTML(
+          "afterbegin",
+          generatePinCodeMarkup(getPincodeForm)
+        );
+        modBtns.insertAdjacentHTML(
+          "afterbegin",
+          `<button class="btn closeModal">Close</button>`
+        );
+        // BUG: NOT GETTING THE OLD LISTENER INSTANTIATE AGAIN!
+        const closeModal = document.querySelector(".closeModal");
+        closeModal.addEventListener("click", () => {
+          modal.close();
+        });
+        //AFTER SUBMITTING PRINT FORM
+        printForm.reset();
+        fileLabel.textContent = "Upload a PDF file";
+        //returns markup of pincode
+        function generatePinCodeMarkup(pincode) {
+          return pincode
+            .split("")
+            .map((digit) => `<p class="code">${digit}</p>`)
+            .join("");
+        }
+      });
+    }
   }
   addHeaderListener(isAdmin) {
     return isAdmin ? true : false;
