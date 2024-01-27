@@ -1,0 +1,69 @@
+.signUp,
+.signIn {
+  display: none;
+}
+.showform {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3rem;
+  align-items: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  border-radius: 15px;
+  box-shadow: 0 3px 25px $box-shadow-color;
+  margin-bottom: 15rem;
+  & > * {
+    font-family: inherit;
+    height: 3rem;
+    width: 30rem;
+    border-radius: 5px;
+  }
+  &__textheader {
+    font-size: 3.2rem;
+    font-weight: 600;
+    &_error {
+      font-size: 1.8rem;
+      font-weight: 500;
+      color: red;
+    }
+  }
+  &__entryfield {
+    border: 1px solid $box-shadow-color;
+    padding: 5px 1rem;
+  }
+  &__btn {
+    display: flex;
+    gap: 2rem;
+    width: 100%;
+    & > * {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      font-family: inherit;
+      width: 100%;
+      border: none;
+      padding: 20px 0;
+      background-color: $color-secondary;
+    }
+  }
+}
+.btn-main {
+  background-color: $color-primary;
+}
+.disclaimer {
+  position: absolute;
+  bottom: 0;
+  align-self: flex-end;
+  &__text {
+    line-height: 1.4;
+  }
+}

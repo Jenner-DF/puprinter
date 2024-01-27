@@ -1,0 +1,146 @@
+.print__section {
+  width: 30rem;
+  margin: 5rem auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  // border: 3px solid green;
+  padding: 10px 0;
+  border-radius: 12px;
+  gap: 2rem;
+  &_wallet {
+    width: 100%;
+  }
+  &_printForm {
+    padding: 2rem 0;
+    width: 100%;
+    // border: 3px solid orange;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 3px 10px $box-shadow-color;
+  }
+}
+.wallet {
+  padding: 2rem 0;
+  background-color: $color-primary;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 3px 10px $box-shadow-color;
+  &__text {
+    padding-bottom: 1rem;
+    text-transform: uppercase;
+    font-size: 1.4rem;
+  }
+  &__balance {
+    text-align: center;
+    position: relative;
+    background-color: #fff;
+    font-size: 3.2rem;
+    font-weight: 700;
+    padding: 1rem 0;
+    width: 60%;
+    border-radius: 3px;
+  }
+}
+.printForm {
+  & > * > * {
+    font-family: inherit;
+  }
+  label,
+  select,
+  button {
+    font-size: 1.4rem;
+  }
+  svg {
+    // border: 3px solid green;
+  }
+  label {
+    font-weight: 500;
+    align-self: flex-start;
+    padding: 1rem 0;
+  }
+  select {
+    font-weight: 300;
+    height: 3.8rem;
+    width: 100%;
+    border: none;
+    border-radius: 6px;
+    padding-left: 1rem;
+    box-shadow: 0 5px 25px lighten($box-shadow-color, 10%);
+  }
+  button {
+    margin-top: 2rem;
+    font-weight: 600;
+    padding: 1rem 4rem;
+    border-radius: 5px;
+    border: none;
+    background-color: $color-primary;
+    cursor: pointer;
+    &:hover,
+    &:active {
+      background-color: darken($color-primary, 5%);
+    }
+  }
+  &__section {
+    // border: 5px solid purple;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    &:first-child {
+      position: relative;
+    }
+    &:first-child::after {
+      position: absolute;
+      content: "";
+      width: 110%;
+      bottom: 0;
+      border-bottom: 1px solid $box-shadow-color;
+    }
+  }
+  &__text {
+    align-self: flex-start;
+    font-size: 2rem;
+    font-weight: 600;
+  }
+  &__file {
+    & label {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.4rem;
+      font-weight: 600;
+      gap: 1rem;
+      cursor: pointer;
+      & .file_label {
+        text-align: center;
+        // border: 2px solid blue;
+        width: 20rem;
+        margin: 0 auto;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+    }
+    input {
+      display: none;
+    }
+    svg {
+      height: 5rem;
+      width: 5rem;
+    }
+  }
+}
+.submit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

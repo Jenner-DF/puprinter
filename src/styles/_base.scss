@@ -1,0 +1,43 @@
+$color-primary: #f9b957;
+$color-secondary: #e0ddd9;
+
+$box-shadow-color: #b7b7b7;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+html {
+  font-size: 62.5%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  // font-size: 50%;
+}
+body {
+  min-height: 100vh;
+  font-family: "Poppins", sans-serif;
+  line-height: 1;
+  font-weight: 400;
+  background-size: cover;
+  background-repeat: no-repeat;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.container {
+  max-width: 144rem;
+  height: 80%;
+  // border: 5px solid rebeccapurple;
+  margin: 0 auto;
+}
+.header {
+  height: 9rem;
+  padding: 1rem 0;
+}
