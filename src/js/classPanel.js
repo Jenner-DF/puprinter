@@ -1,6 +1,8 @@
+import { doc, onSnapshot } from "firebase/firestore";
 import icons from "../img/icons.svg";
 import printerloading from "../img/printerloading.gif";
 import PrintForm from "./printForms";
+import { db } from "./firebaseConfig";
 
 export default class Panel {
   //NOTE: missing get user data (wallet) for printmarkup
@@ -70,11 +72,15 @@ export default class Panel {
   }
 
   renderPrintForm(user) {
+    this._user = user;
     const printFormMarkup = this.generatePrintFormMarkup(user);
     document.body.children[1].innerHTML = printFormMarkup;
     this.addPrintFormListener();
   }
   addPrintFormListener() {
+    // onSnapshot(doc(db,'users',this._user.uid),snapshot =>{
+    //   snapshot.data().wallet
+    // })
     const printForm = document.querySelector(".printForm");
     const loaderEl = document.querySelector(".loader");
     const fileInput = printForm.querySelector("#file");
@@ -84,6 +90,7 @@ export default class Panel {
     const modText = document.querySelector(".modal__text");
     const modImg = document.querySelector(".modal__img");
     const modBtns = document.querySelector(".modal__btns");
+    const mywalletBal = document.querySelector(".wallet__balance");
     fileInput.addEventListener("change", function () {
       const selectedFile = this.files[0];
       if (selectedFile.type !== "application/pdf")
@@ -100,19 +107,21 @@ export default class Panel {
         modal.showModal();
         //show Price Dialog
         this.renderSpinner(modImg);
-        const priceFile = await PrintForm._generatePriceAmount(
+        this.priceFile = await PrintForm._generatePriceAmount(
           printForm.file.files[0],
           printForm.select_paper.value,
           printForm.select_colored.value,
           true
         );
         this._clear(modImg);
-        showPriceDialog(priceFile);
+        showPriceDialog(this.priceFile, this._user.wallet);
       } catch (e) {
         this.renderError(loaderEl, e);
       }
     });
-    function showPriceDialog(price) {
+    function showPriceDialog(price, wallet) {
+      const priceFile = price;
+      const walletBal = wallet;
       modText.innerHTML = "";
       modImg.innerHTML = "";
       modBtns.innerHTML = "";
@@ -132,58 +141,81 @@ export default class Panel {
       closeModal.addEventListener("click", () => {
         modal.close();
       });
+      //checks Wallet if enough balance for File
+      const isWalletEnoughBal = () => (walletBal > priceFile ? true : false);
       //listen for clicking print button inside dialog
       btnSubmit.addEventListener("click", async () => {
         modText.innerHTML = "";
         modImg.innerHTML = "";
         modBtns.innerHTML = "";
-        modText.insertAdjacentHTML(
-          "afterbegin",
-          `<p>Generating file pin code...</p>`
-        );
-        modImg.insertAdjacentHTML(
-          "afterbegin",
-          `<img src="${printerloading}" alt="Printing Image" />`
-        );
-        //get file pincode, returns pincode of file
-        //NOTE: USE TRY CATCH FOR ERROR
-        const getPincodeForm = await PrintForm.createInstance(
-          printForm.file.files[0],
-          printForm.select_colored.value,
-          printForm.select_paper.value
-        );
-        modText.innerHTML = "";
-        modImg.innerHTML = "";
-        modBtns.innerHTML = "";
-        modText.insertAdjacentHTML(
-          "afterbegin",
-          `<p>
-          Please proceed to the machine and enter this code to get your
-          document:
-        </p>`
-        );
-        modImg.insertAdjacentHTML(
-          "afterbegin",
-          generatePinCodeMarkup(getPincodeForm)
-        );
-        modBtns.insertAdjacentHTML(
-          "afterbegin",
-          `<button class="btn closeModal">Close</button>`
-        );
-        // NOTE: DUPLICATE CODE FOR LISTENER
-        const closeModal = document.querySelector(".closeModal");
-        closeModal.addEventListener("click", () => {
-          modal.close();
-        });
-        //AFTER SUBMITTING PRINT FORM
-        printForm.reset();
-        fileLabel.textContent = "Upload a PDF file";
-        //returns markup of pincode
-        function generatePinCodeMarkup(pincode) {
-          return pincode
-            .split("")
-            .map((digit) => `<p class="code">${digit}</p>`)
-            .join("");
+        if (!isWalletEnoughBal()) {
+          modText.insertAdjacentHTML(
+            "afterbegin",
+            `<p>Insufficient Balance!</p>`
+          );
+          modImg.insertAdjacentHTML(
+            "afterbegin",
+            `<p>Please load at the nearest provider.</p>`
+          );
+          modBtns.insertAdjacentHTML(
+            "afterbegin",
+            `<button class="btn closeModal">Close</button>`
+          );
+          // NOTE: DUPLICATE CODE FOR LISTENER
+          const closeModal = document.querySelector(".closeModal");
+          closeModal.addEventListener("click", () => {
+            modal.close();
+          });
+        } else {
+          modText.insertAdjacentHTML(
+            "afterbegin",
+            `<p>Generating file pin code...</p>`
+          );
+          modImg.insertAdjacentHTML(
+            "afterbegin",
+            `<img src="${printerloading}" alt="Printing Image" />`
+          );
+          //get file pincode, returns pincode of file
+          //NOTE: USE TRY CATCH FOR ERROR
+          const getPincodeForm = await PrintForm.createInstance(
+            printForm.file.files[0],
+            printForm.select_colored.value,
+            printForm.select_paper.value
+          );
+          modText.innerHTML = "";
+          modImg.innerHTML = "";
+          modBtns.innerHTML = "";
+          modText.insertAdjacentHTML(
+            "afterbegin",
+            `<p>
+            Please proceed to the machine and enter this code to get your
+            document:
+          </p>`
+          );
+          modImg.insertAdjacentHTML(
+            "afterbegin",
+            generatePinCodeMarkup(getPincodeForm)
+          );
+          modBtns.insertAdjacentHTML(
+            "afterbegin",
+            `<button class="btn closeModal">Close</button>`
+          );
+          // NOTE: DUPLICATE CODE FOR LISTENER
+          const closeModal = document.querySelector(".closeModal");
+          closeModal.addEventListener("click", () => {
+            modal.close();
+          });
+          //AFTER SUBMITTING PRINT FORM
+          printForm.reset();
+          fileLabel.textContent = "Upload a PDF file";
+          mywalletBal.textContent = `₱${(walletBal - priceFile).toFixed(2)}`;
+          //returns markup of pincode
+          function generatePinCodeMarkup(pincode) {
+            return pincode
+              .split("")
+              .map((digit) => `<p class="code">${digit}</p>`)
+              .join("");
+          }
         }
       });
     }

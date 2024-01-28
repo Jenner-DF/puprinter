@@ -67,9 +67,6 @@ class userPanel extends classPanel {
     );
     const allDocs = [...activeDocs, ...this._pastDocs];
     console.log(allDocs);
-    // console.log(activeDocs);
-    // console.log(pastDocs);
-
     document.body.children[1].innerHTML = `<h6>${this._userData}</h6>`;
   }
   makeArray(array) {

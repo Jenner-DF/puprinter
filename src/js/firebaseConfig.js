@@ -93,6 +93,7 @@ async function getUserDocs(uid) {
   );
   return await getDocs(q);
 }
+
 export {
   serverTimestamp,
   storage,

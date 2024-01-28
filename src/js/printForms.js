@@ -1,6 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 //prettier-ignore
 import { storage,addDoc,doc,getDoc,getDocs,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes, getUserProfile } from "./firebaseConfig";
+import { updateDoc } from "firebase/firestore";
 //NOTE: JUSTCORS IS IN URL WHEN DEPLOYING LIVE!
 //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
 
@@ -20,13 +21,9 @@ export default class PrintForm {
   }
   async _exportPrintFormToDB() {
     try {
-      console.log(`LOGGENING PUKINGNANG MINO!!!!`);
       this._userData = await getUserProfile(auth.currentUser.uid);
-      console.log(this._userData);
       this.fileurl = await this._generateFileUrl();
-      console.log(this.fileurl);
       this.pincode = await this._generateFilePinCode();
-      console.log(this.pincode);
       this.price = await PrintForm._generatePriceAmount(
         this.fileurl,
         this.paperSize,
@@ -44,9 +41,16 @@ export default class PrintForm {
         status: "Ready for Printing",
         timestamp: serverTimestamp(),
       });
+      await this.updateUserWallet();
     } catch (e) {
       alert(e);
     }
+  }
+  async updateUserWallet() {
+    const newWalletBal = this._userData.wallet - this.price;
+    await updateDoc(doc(db, "users", this._userData.uid), {
+      wallet: newWalletBal,
+    });
   }
   async _generateFileUrl() {
     const storageRef = ref(storage, String(this.userID)); //path
