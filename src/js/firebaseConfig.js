@@ -65,7 +65,7 @@ async function newUserDB(user, password, secretpin) {
         password: password,
         secretpin: secretpin,
         wallet: 0,
-        history: [],
+        history: "[]",
         uid: user.uid,
       },
       { merge: true }
@@ -85,7 +85,6 @@ async function getUserProfile(uid) {
   const getdoc = await getDoc(docRef);
   return getdoc.data();
 }
-
 async function getUserDocs(uid) {
   const q = query(
     collection(db, "printForms"),

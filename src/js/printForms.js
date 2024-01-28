@@ -41,6 +41,7 @@ export default class PrintForm {
         price: this.price,
         colored: this.paperColor,
         filePinCode: this.pincode,
+        status: "Ready for Printing",
         timestamp: serverTimestamp(),
       });
     } catch (e) {

@@ -4,14 +4,14 @@ import PrintForm from "./printForms";
 
 export default class Panel {
   //NOTE: missing get user data (wallet) for printmarkup
-  _printFormMarkup = `
-  <div class="container print__section">
+  generatePrintFormMarkup(user) {
+    return `<div class="container print__section">
     <div class='loader'></div>
     <div class="section print__section_wallet">
-      <div class="printForm__text">Hello, PUPian!</div>
+      <div class="printForm__text">Hello, ${user.users.split("@")[0]}!</div>
       <div class="wallet">
         <p class="wallet__text">Available Balance:</p>
-        <div class="wallet__balance">₱547.20</div>
+        <div class="wallet__balance">₱${user.wallet.toFixed(2)}</div>
       </div>
     </div>
     <div class="section print__section_printForm">
@@ -67,9 +67,11 @@ export default class Panel {
       </dialog>
     </div>
   </div>`;
+  }
 
-  renderPrintForm() {
-    document.body.children[1].innerHTML = this._printFormMarkup;
+  renderPrintForm(user) {
+    const printFormMarkup = this.generatePrintFormMarkup(user);
+    document.body.children[1].innerHTML = printFormMarkup;
     this.addPrintFormListener();
   }
   addPrintFormListener() {

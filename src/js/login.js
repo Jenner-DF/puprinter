@@ -1,5 +1,4 @@
-import { signIn, signup } from "./firebaseConfig";
-import { initPanel } from "./controller";
+import { signIn, signup, userSignOut } from "./firebaseConfig";
 import Panel from "./classPanel";
 import logo from "../img/Pay-U-Print-logo.png";
 
@@ -113,9 +112,8 @@ class loginPanel extends Panel {
       const email = loginForm.email.value;
       const password = loginForm.password.value;
       try {
-        this.renderSpinner(document.body.children[1]);
+        this._clear(document.body);
         await signIn(email, password);
-        await initPanel();
       } catch (e) {
         this.renderError(textheader_error_login, e);
       }
@@ -129,8 +127,8 @@ class loginPanel extends Panel {
       try {
         this.renderSpinner(textheader_error_register);
         await signup(email, password, secretpin);
-        this._clear(textheader_error_register);
         register_succesful();
+        await userSignOut();
       } catch (e) {
         this.renderError(textheader_error_register, e);
       }

@@ -1,11 +1,9 @@
 import logo from "../img/Pay-U-Print-logo.png";
 import icons from "../img/icons.svg";
 import classPanel from "./classPanel";
-import { initLogin } from "./controller";
 //prettier-ignore
 import { auth, getUserDocs, getUserProfile, userSignOut } from "./firebaseConfig";
 class userPanel extends classPanel {
-  _userDocs;
   _header = `<header class="header panel_user">
   <img
     class="header__login_logo"
@@ -28,7 +26,7 @@ class userPanel extends classPanel {
     try {
       this._userData = await getUserProfile(uid);
       this._activeDocs = await getUserDocs(auth.currentUser.uid);
-      this._pastDocs = this._userData.history;
+      this._pastDocs = JSON.parse(this._userData.history);
       console.log(this._userData);
       this.render();
     } catch (e) {
@@ -38,7 +36,7 @@ class userPanel extends classPanel {
   render() {
     this._clear(document.body);
     this.renderHeader();
-    this.renderPrintForm();
+    this.renderPrintForm(this._userData);
   }
   renderHeader() {
     document.body.innerHTML = this._header;
@@ -49,7 +47,7 @@ class userPanel extends classPanel {
     const history = document.querySelector(".history");
     const logout = document.querySelector(".logout");
     upload.addEventListener("click", () => {
-      this.renderPrintForm();
+      this.renderPrintForm(this._userData);
     });
     history.addEventListener("click", async () => {
       await this.renderHistory();
@@ -57,29 +55,31 @@ class userPanel extends classPanel {
     logout.addEventListener("click", async () => {
       try {
         userSignOut();
-        initLogin();
       } catch (e) {
         alert(e);
       }
     });
   }
   async renderHistory() {
-    const pastDocs = this._pastDocs.map((doc) => ({
-      filename: doc.filename,
-      filepincode: doc.filePinCode,
-      papersize: doc.paperSize,
-      timestamp: doc.timestamp,
-    }));
-    const activeDocs = this._activeDocs.docs.map((doc) => ({
+    const activeDocs = this.makeArray(
+      this._activeDocs.docs,
+      "Ready for Printing"
+    );
+    const allDocs = [...activeDocs, ...this._pastDocs];
+    console.log(allDocs);
+    // console.log(activeDocs);
+    // console.log(pastDocs);
+
+    document.body.children[1].innerHTML = `<h6>${this._userData}</h6>`;
+  }
+  makeArray(array) {
+    return array.map((doc) => ({
       filename: doc.data().filename,
       filepincode: doc.data().filePinCode,
       papersize: doc.data().paperSize,
-      timestamp: this.formatTimeStamp(doc.data().timestamp),
+      timestamp: doc.data().timestamp,
+      status: doc.data().status,
     }));
-    console.log(activeDocs);
-    console.log(pastDocs);
-
-    document.body.children[1].innerHTML = `<h6>${this._userData}</h6>`;
   }
   formatTimeStamp(timestamp) {
     const date = new Date(
