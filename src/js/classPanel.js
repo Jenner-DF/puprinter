@@ -140,7 +140,7 @@ export default class Panel {
         modal.close();
       });
       //checks Wallet if enough balance for File
-      const isWalletEnoughBal = () => (walletBal > priceFile ? true : false);
+      const isWalletEnoughBal = () => (walletBal >= priceFile ? true : false);
       //listen for clicking print button inside dialog
       btnSubmit.addEventListener("click", async () => {
         modText.innerHTML = "";

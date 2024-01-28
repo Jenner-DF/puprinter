@@ -1,8 +1,15 @@
+import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import logo from "../img/Pay-U-Print-logo.png";
 import icons from "../img/icons.svg";
 import classPanel from "./classPanel";
 //prettier-ignore
-import { auth, getUserDocs, getUserProfile, userSignOut } from "./firebaseConfig";
+import { auth, db, getUserDocs, getUserProfile, userSignOut } from "./firebaseConfig";
 class userPanel extends classPanel {
   _header = `<header class="header panel_user">
   <img
@@ -24,8 +31,25 @@ class userPanel extends classPanel {
   }
   async initUserData(uid) {
     try {
+      const q = query(
+        collection(db, "printForms"),
+        where("userID", "==", uid),
+        orderBy("timestamp", "desc")
+      );
+      onSnapshot(q, (querySnapshot) => {
+        const docs = [];
+        querySnapshot.forEach((doc) => {
+          docs.push({
+            filename: doc.data().filename,
+            filepincode: doc.data().filePinCode,
+            papersize: doc.data().paperSize,
+            timestamp: doc.data().timestamp,
+            status: doc.data().status,
+          });
+        });
+        this._activeDocs = docs; // update active docs array
+      });
       this._userData = await getUserProfile(uid);
-      this._activeDocs = await getUserDocs(auth.currentUser.uid);
       this._pastDocs = JSON.parse(this._userData.history);
       console.log(this._userData);
       this.render();
@@ -61,22 +85,9 @@ class userPanel extends classPanel {
     });
   }
   async renderHistory() {
-    const activeDocs = this.makeArray(
-      this._activeDocs.docs,
-      "Ready for Printing"
-    );
-    const allDocs = [...activeDocs, ...this._pastDocs];
+    const allDocs = [...this._activeDocs, ...this._pastDocs];
     console.log(allDocs);
     document.body.children[1].innerHTML = `<h6>${this._userData}</h6>`;
-  }
-  makeArray(array) {
-    return array.map((doc) => ({
-      filename: doc.data().filename,
-      filepincode: doc.data().filePinCode,
-      papersize: doc.data().paperSize,
-      timestamp: doc.data().timestamp,
-      status: doc.data().status,
-    }));
   }
   formatTimeStamp(timestamp) {
     const date = new Date(
