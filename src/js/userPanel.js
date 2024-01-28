@@ -2,9 +2,10 @@ import logo from "../img/Pay-U-Print-logo.png";
 import icons from "../img/icons.svg";
 import classPanel from "./classPanel";
 import { initLogin } from "./controller";
-import { getUserDetails, userSignOut } from "./firebaseConfig";
+//prettier-ignore
+import { auth, getUserDocs, getUserProfile, userSignOut } from "./firebaseConfig";
 class userPanel extends classPanel {
-  _userData = getUserDetails();
+  _userDocs;
   _header = `<header class="header panel_user">
   <img
     class="header__login_logo"
@@ -19,6 +20,21 @@ class userPanel extends classPanel {
     </ul>
   </nav>
 </header><main></main>`;
+  constructor(uid) {
+    super();
+    this.initUserData(uid);
+  }
+  async initUserData(uid) {
+    try {
+      this._userData = await getUserProfile(uid);
+      this._activeDocs = await getUserDocs(auth.currentUser.uid);
+      this._pastDocs = this._userData.history;
+      console.log(this._userData);
+      this.render();
+    } catch (e) {
+      alert(e);
+    }
+  }
   render() {
     this._clear(document.body);
     this.renderHeader();
@@ -35,8 +51,8 @@ class userPanel extends classPanel {
     upload.addEventListener("click", () => {
       this.renderPrintForm();
     });
-    history.addEventListener("click", () => {
-      this.renderHistory();
+    history.addEventListener("click", async () => {
+      await this.renderHistory();
     });
     logout.addEventListener("click", async () => {
       try {
@@ -47,8 +63,35 @@ class userPanel extends classPanel {
       }
     });
   }
-  renderHistory() {
-    document.body.children[1].innerHTML = `<h1>hello WORLD! </h1>`;
+  async renderHistory() {
+    const pastDocs = this._pastDocs.map((doc) => ({
+      filename: doc.filename,
+      filepincode: doc.filePinCode,
+      papersize: doc.paperSize,
+      timestamp: doc.timestamp,
+    }));
+    const activeDocs = this._activeDocs.docs.map((doc) => ({
+      filename: doc.data().filename,
+      filepincode: doc.data().filePinCode,
+      papersize: doc.data().paperSize,
+      timestamp: this.formatTimeStamp(doc.data().timestamp),
+    }));
+    console.log(activeDocs);
+    console.log(pastDocs);
+
+    document.body.children[1].innerHTML = `<h6>${this._userData}</h6>`;
+  }
+  formatTimeStamp(timestamp) {
+    const date = new Date(
+      timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000
+    );
+    const formattedDate =
+      String(date.getMonth() + 1).padStart(2, "0") +
+      "-" + // Months are 0-based
+      String(date.getDate()).padStart(2, "0") +
+      "-" +
+      date.getFullYear();
+    return formattedDate;
   }
 }
-export default new userPanel();
+export default userPanel;

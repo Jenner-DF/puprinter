@@ -113,10 +113,9 @@ class loginPanel extends Panel {
       const email = loginForm.email.value;
       const password = loginForm.password.value;
       try {
-        this.renderSpinner(textheader_error_login);
+        this.renderSpinner(document.body.children[1]);
         await signIn(email, password);
         await initPanel();
-        this._clear(textheader_error_login);
       } catch (e) {
         this.renderError(textheader_error_login, e);
       }

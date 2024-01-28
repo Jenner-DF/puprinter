@@ -1,11 +1,10 @@
 import { PDFDocument } from "pdf-lib";
 //prettier-ignore
-import { storage,addDoc,doc,getDoc,getDocs,getUserData,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes } from "./firebaseConfig";
+import { storage,addDoc,doc,getDoc,getDocs,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes, getUserProfile } from "./firebaseConfig";
 //NOTE: JUSTCORS IS IN URL WHEN DEPLOYING LIVE!
 //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
 
 export default class PrintForm {
-  _userData;
   _colRef = collection(db, "printForms");
   constructor(file, paperColor, paperSize) {
     this.userID = auth.currentUser.uid;
@@ -16,12 +15,11 @@ export default class PrintForm {
   }
   static async createInstance(file, colored, paperSize) {
     const instance = new PrintForm(file, colored, paperSize);
-    await instance._exportPrintFormToDB();
     return instance.pincode;
   }
   async _exportPrintFormToDB() {
     try {
-      this._userData = await getUserData(this.userID);
+      this._userData = await getUserProfile(auth.currentUser.uid);
       this.fileurl = await this._generateFileUrl();
       this.pincode = await this._generateFilePinCode();
       this.price = await PrintForm._generatePriceAmount(
@@ -58,6 +56,7 @@ export default class PrintForm {
   }
   async _generateFilePinCode() {
     const snapshot = await getDocs(collection(db, "printForms"));
+    console.log(snapshot);
     const pincode = String(snapshot.size + 1).padStart(4, "0");
     return pincode;
   }

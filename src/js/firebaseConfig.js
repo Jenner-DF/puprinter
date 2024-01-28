@@ -66,6 +66,7 @@ async function newUserDB(user, password, secretpin) {
         secretpin: secretpin,
         wallet: 0,
         history: [],
+        uid: user.uid,
       },
       { merge: true }
     );
@@ -73,19 +74,25 @@ async function newUserDB(user, password, secretpin) {
     throw e;
   }
 }
-//get firebase currently logged in
-function getUserDetails() {
-  return auth.currentUser;
-}
+
 //returns bool checks user has Admin privilege
 async function isAdmin() {
-  return getUserData(auth.currentUser.uid).isAdmin;
+  return getUserProfile(auth.currentUser.uid).isAdmin;
 }
-//get firebase user data
-async function getUserData(uid) {
+//get firebase user profile of currently logged in
+async function getUserProfile(uid) {
   const docRef = doc(db, "users", uid);
   const getdoc = await getDoc(docRef);
   return getdoc.data();
+}
+
+async function getUserDocs(uid) {
+  const q = query(
+    collection(db, "printForms"),
+    where("userID", "==", uid),
+    orderBy("timestamp", "desc")
+  );
+  return await getDocs(q);
 }
 export {
   serverTimestamp,
@@ -93,7 +100,8 @@ export {
   doc,
   getDoc,
   getDocs,
-  getUserData,
+  getUserProfile,
+  getUserDocs,
   ref,
   addDoc,
   collection,
@@ -103,7 +111,6 @@ export {
   auth,
   signIn,
   signup,
-  getUserDetails,
   isAdmin,
   userSignOut,
 };
