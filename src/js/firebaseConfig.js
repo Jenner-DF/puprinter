@@ -46,6 +46,14 @@ async function signup(email, password, secretpin) {
     throw e;
   }
 }
+// sign out account
+async function userSignOut() {
+  try {
+    await signOut(auth);
+  } catch (e) {
+    throw e;
+  }
+}
 //adds and checks to users db for duplicate
 async function newUserDB(user, password, secretpin) {
   try {
@@ -65,13 +73,15 @@ async function newUserDB(user, password, secretpin) {
     throw e;
   }
 }
+//get firebase currently logged in
 function getUserDetails() {
   return auth.currentUser;
 }
-
+//returns bool checks user has Admin privilege
 async function isAdmin() {
   return getUserData(auth.currentUser.uid).isAdmin;
 }
+//get firebase user data
 async function getUserData(uid) {
   const docRef = doc(db, "users", uid);
   const getdoc = await getDoc(docRef);
@@ -95,4 +105,5 @@ export {
   signup,
   getUserDetails,
   isAdmin,
+  userSignOut,
 };

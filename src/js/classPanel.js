@@ -1,10 +1,9 @@
 import icons from "../img/icons.svg";
 import printerloading from "../img/printerloading.gif";
 import PrintForm from "./printForms";
-import { auth, signIn, signup } from "./firebaseConfig";
-import { initPanel } from "./controller";
 
 export default class Panel {
+  //NOTE: missing get user data (wallet) for printmarkup
   _printFormMarkup = `
   <div class="container print__section">
     <div class='loader'></div>
@@ -68,70 +67,10 @@ export default class Panel {
       </dialog>
     </div>
   </div>`;
-  renderHeader(markup, isAdmin = false) {
-    document.body.insertAdjacentHTML("afterbegin", markup);
-    this.addHeaderListener(isAdmin);
-  }
+
   renderPrintForm() {
     document.body.children[1].innerHTML = this._printFormMarkup;
     this.addPrintFormListener();
-  }
-  renderLogin(loginmarkup) {
-    document.body.insertAdjacentHTML("afterbegin", loginmarkup);
-    this.addLoginListener();
-  }
-  renderHistory(markup) {
-    this._clear();
-    document.body.children[1].innerHTML = markup;
-  }
-  _clear(parentEl) {
-    parentEl.innerHTML = "";
-  }
-  addLoginListener() {
-    const registerForm = document.querySelector(".signUp");
-    const loginForm = document.querySelector(".signIn");
-    const btnSwapForms = document.querySelectorAll(".form__btn_swapform");
-    const textheader_error_login = document.querySelector(".error_signIn");
-    const textheader_error_register = document.querySelector(".error_signUp");
-    btnSwapForms.forEach(function (btnSwapForm) {
-      btnSwapForm.addEventListener("click", function (e) {
-        e.preventDefault();
-        registerForm.classList.toggle("showform");
-        loginForm.classList.toggle("showform");
-      });
-    });
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = loginForm.email.value;
-      const password = loginForm.password.value;
-      try {
-        this.renderSpinner(textheader_error_login);
-        await signIn(email, password);
-        await initPanel();
-        this._clear(textheader_error_login);
-      } catch (e) {
-        this.renderError(textheader_error_login, e);
-      }
-    });
-    registerForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = registerForm.email.value;
-      const password = registerForm.password.value;
-      const secretpin = registerForm.secretpin.value;
-      console.log(email, password, secretpin);
-      try {
-        this.renderSpinner(textheader_error_register);
-        await signup(email, password, secretpin);
-        this._clear(textheader_error_register);
-        register_succesful();
-      } catch (e) {
-        this.renderError(textheader_error_register, e);
-      }
-    });
-    function register_succesful() {
-      textheader_error_register.innerHTML = "";
-      textheader_error_register.innerHTML = "Account Registered Successfully!";
-    }
   }
   addPrintFormListener() {
     const printForm = document.querySelector(".printForm");
@@ -228,7 +167,7 @@ export default class Panel {
           "afterbegin",
           `<button class="btn closeModal">Close</button>`
         );
-        // BUG: NOT GETTING THE OLD LISTENER INSTANTIATE AGAIN!
+        // NOTE: DUPLICATE CODE FOR LISTENER
         const closeModal = document.querySelector(".closeModal");
         closeModal.addEventListener("click", () => {
           modal.close();
@@ -246,11 +185,8 @@ export default class Panel {
       });
     }
   }
-  addHeaderListener(isAdmin) {
-    return isAdmin ? true : false;
-    //userlisteners
-
-    //adminlisteners
+  _clear(parentEl) {
+    parentEl.innerHTML = "";
   }
   renderSpinner(parentEl) {
     const spinnerMarkup = `

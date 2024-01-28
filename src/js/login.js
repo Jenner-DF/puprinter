@@ -1,5 +1,4 @@
-import { auth, signIn, signup } from "./firebaseConfig";
-import icons from "../img/icons.svg";
+import { signIn, signup } from "./firebaseConfig";
 import { initPanel } from "./controller";
 import Panel from "./classPanel";
 import logo from "../img/Pay-U-Print-logo.png";
@@ -88,66 +87,59 @@ class loginPanel extends Panel {
     </p>
   </div>
   </main>`;
-  _addListener() {}
+  render() {
+    this._clear(document.body);
+    this.renderLogin();
+  }
+  renderLogin() {
+    document.body.insertAdjacentHTML("afterbegin", this._loginMarkup);
+    this.addLoginListener();
+  }
+  addLoginListener() {
+    const registerForm = document.querySelector(".signUp");
+    const loginForm = document.querySelector(".signIn");
+    const btnSwapForms = document.querySelectorAll(".form__btn_swapform");
+    const textheader_error_login = document.querySelector(".error_signIn");
+    const textheader_error_register = document.querySelector(".error_signUp");
+    btnSwapForms.forEach(function (btnSwapForm) {
+      btnSwapForm.addEventListener("click", function (e) {
+        e.preventDefault();
+        registerForm.classList.toggle("showform");
+        loginForm.classList.toggle("showform");
+      });
+    });
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = loginForm.email.value;
+      const password = loginForm.password.value;
+      try {
+        this.renderSpinner(textheader_error_login);
+        await signIn(email, password);
+        await initPanel();
+        this._clear(textheader_error_login);
+      } catch (e) {
+        this.renderError(textheader_error_login, e);
+      }
+    });
+    registerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = registerForm.email.value;
+      const password = registerForm.password.value;
+      const secretpin = registerForm.secretpin.value;
+      console.log(email, password, secretpin);
+      try {
+        this.renderSpinner(textheader_error_register);
+        await signup(email, password, secretpin);
+        this._clear(textheader_error_register);
+        register_succesful();
+      } catch (e) {
+        this.renderError(textheader_error_register, e);
+      }
+    });
+    function register_succesful() {
+      textheader_error_register.innerHTML = "";
+      textheader_error_register.innerHTML = "Account Registered Successfully!";
+    }
+  }
 }
 export default new loginPanel();
-
-// const main = document.querySelector(".main");
-// const registerForm = document.querySelector(".signUp");
-// const loginForm = document.querySelector(".signIn");
-// const btnSwapForms = document.querySelectorAll(".form__btn_swapform");
-// const textheader_error_login = document.querySelector(".error_signIn");
-// const textheader_error_register = document.querySelector(".error_signUp");
-// btnSwapForms.forEach(function (btnSwapForm) {
-//   btnSwapForm.addEventListener("click", function (e) {
-//     e.preventDefault();
-//     registerForm.classList.toggle("showform");
-//     loginForm.classList.toggle("showform");
-//   });
-// });
-// function renderSpinner(parentEl, error = "") {
-//   const spinnerMarkup = `
-//   <div class="spinner">
-//           <svg>
-//             <use href="${icons}#icon-loader"></use>
-//           </svg>
-//         </div>
-//   `;
-//   const errorMarkup = `<div class="form__textheader_error">${error}</div>`;
-//   parentEl.innerHTML = "";
-//   error
-//     ? parentEl.insertAdjacentHTML("afterbegin", errorMarkup)
-//     : parentEl.insertAdjacentHTML("afterbegin", spinnerMarkup);
-// }
-// loginForm.addEventListener("submit", async (e) => {
-//   e.preventDefault();
-//   const email = loginForm.email.value;
-//   const password = loginForm.password.value;
-//   try {
-//     console.log("PAKYU 3000");
-//     renderSpinner(textheader_error_login);
-//     await signIn(email, password);
-//     renderSpinner(textheader_error_login);
-//     await initPanel();
-//   } catch (e) {
-//     renderSpinner(textheader_error_login, e);
-//   }
-// });
-// registerForm.addEventListener("submit", async (e) => {
-//   e.preventDefault();
-//   const email = registerForm.email.value;
-//   const password = registerForm.password.value;
-//   const secretpin = registerForm.secretpin.value;
-//   console.log(email, password, secretpin);
-//   try {
-//     renderSpinner(textheader_error_register);
-//     await signup(email, password, secretpin);
-//     register_succesful();
-//   } catch (e) {
-//     renderSpinner(textheader_error_register, e);
-//   }
-// });
-// function register_succesful() {
-//   textheader_error_register.innerHTML = "";
-//   textheader_error_register.innerHTML = "Account Registered Successfully!";
-// }
