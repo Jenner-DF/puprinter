@@ -36,7 +36,7 @@ class userPanel extends classPanel {
   render() {
     this._clear(document.body);
     this.renderHeader();
-    this.renderPrintForm(this._userData);
+    this.renderPrintForm();
   }
   renderHeader() {
     document.body.innerHTML = this._header;
@@ -47,7 +47,7 @@ class userPanel extends classPanel {
     const history = document.querySelector(".history");
     const logout = document.querySelector(".logout");
     upload.addEventListener("click", () => {
-      this.renderPrintForm(this._userData);
+      this.renderPrintForm();
     });
     history.addEventListener("click", async () => {
       await this.renderHistory();

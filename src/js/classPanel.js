@@ -2,10 +2,9 @@ import { doc, onSnapshot } from "firebase/firestore";
 import icons from "../img/icons.svg";
 import printerloading from "../img/printerloading.gif";
 import PrintForm from "./printForms";
-import { db } from "./firebaseConfig";
+import { auth, db, getUserProfile } from "./firebaseConfig";
 
 export default class Panel {
-  //NOTE: missing get user data (wallet) for printmarkup
   generatePrintFormMarkup(user) {
     return `<div class="container print__section">
     <div class='loader'></div>
@@ -70,17 +69,13 @@ export default class Panel {
     </div>
   </div>`;
   }
-
-  renderPrintForm(user) {
-    this._user = user;
-    const printFormMarkup = this.generatePrintFormMarkup(user);
+  async renderPrintForm() {
+    this._user = await getUserProfile(auth.currentUser.uid);
+    const printFormMarkup = this.generatePrintFormMarkup(this._user);
     document.body.children[1].innerHTML = printFormMarkup;
     this.addPrintFormListener();
   }
   addPrintFormListener() {
-    // onSnapshot(doc(db,'users',this._user.uid),snapshot =>{
-    //   snapshot.data().wallet
-    // })
     const printForm = document.querySelector(".printForm");
     const loaderEl = document.querySelector(".loader");
     const fileInput = printForm.querySelector("#file");
@@ -114,7 +109,10 @@ export default class Panel {
           true
         );
         this._clear(modImg);
-        showPriceDialog(this.priceFile, this._user.wallet);
+        console.log(this._user);
+        const wallet = await getUserProfile(this._user.uid);
+        console.log(wallet.wallet);
+        showPriceDialog(this.priceFile, wallet.wallet);
       } catch (e) {
         this.renderError(loaderEl, e);
       }
@@ -163,9 +161,7 @@ export default class Panel {
           );
           // NOTE: DUPLICATE CODE FOR LISTENER
           const closeModal = document.querySelector(".closeModal");
-          closeModal.addEventListener("click", () => {
-            modal.close();
-          });
+          closeModal.addEventListener("click", () => modal.close());
         } else {
           modText.insertAdjacentHTML(
             "afterbegin",
@@ -202,9 +198,8 @@ export default class Panel {
           );
           // NOTE: DUPLICATE CODE FOR LISTENER
           const closeModal = document.querySelector(".closeModal");
-          closeModal.addEventListener("click", () => {
-            modal.close();
-          });
+          closeModal.addEventListener("click", () => modal.close());
+
           //AFTER SUBMITTING PRINT FORM
           printForm.reset();
           fileLabel.textContent = "Upload a PDF file";
