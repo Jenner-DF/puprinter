@@ -15,13 +15,18 @@ export default class PrintForm {
   }
   static async createInstance(file, colored, paperSize) {
     const instance = new PrintForm(file, colored, paperSize);
+    await instance._exportPrintFormToDB();
     return instance.pincode;
   }
   async _exportPrintFormToDB() {
     try {
+      console.log(`LOGGENING PUKINGNANG MINO!!!!`);
       this._userData = await getUserProfile(auth.currentUser.uid);
+      console.log(this._userData);
       this.fileurl = await this._generateFileUrl();
+      console.log(this.fileurl);
       this.pincode = await this._generateFilePinCode();
+      console.log(this.pincode);
       this.price = await PrintForm._generatePriceAmount(
         this.fileurl,
         this.paperSize,
