@@ -65,11 +65,12 @@ export default class PrintForm {
     const papersize = paper === "short" ? 2 : 3;
     const colored = color === "colored" ? 3 : 0;
     this.pricemultiplier = papersize + colored;
-    //needs to bypass CORS because of local server NOTE:REMOVE WHEN DEPLOYING LIVE
     let url;
     let existingPdfBytes;
     if (!local) {
-      url = `https://justcors.com/tl_7de7b57/${file}`;
+      //needs to bypass CORS because of local server NOTE:REMOVE WHEN DEPLOYING LIVE
+      // url = `https://justcors.com/tl_6dceeee/${file}`;
+      url = file;
       existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
     } else {
       existingPdfBytes = await file.arrayBuffer();
