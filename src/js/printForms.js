@@ -1,7 +1,9 @@
 import { PDFDocument } from "pdf-lib";
 //prettier-ignore
 import { storage,addDoc,doc,getDoc,getDocs,getUserData,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes } from "./firebaseConfig";
-//NOTE: REMOVE JUSTCORS IN URL WHEN DEPLOYING LIVE!
+//NOTE: JUSTCORS IS IN URL WHEN DEPLOYING LIVE!
+//NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
+
 export default class PrintForm {
   _userData;
   _colRef = collection(db, "printForms");
@@ -68,9 +70,8 @@ export default class PrintForm {
     let url;
     let existingPdfBytes;
     if (!local) {
-      //needs to bypass CORS because of local server NOTE:REMOVE WHEN DEPLOYING LIVE
-      // url = `https://justcors.com/tl_6dceeee/${file}`;
-      url = file;
+      //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
+      url = `https://justcors.com/tl_6dceeee/${file}`;
       existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
     } else {
       existingPdfBytes = await file.arrayBuffer();

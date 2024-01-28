@@ -144,6 +144,7 @@ export default class Panel {
           `<img src="${printerloading}" alt="Printing Image" />`
         );
         //get file pincode, returns pincode of file
+        //NOTE: USE TRY CATCH FOR ERROR
         const getPincodeForm = await PrintForm.createInstance(
           printForm.file.files[0],
           printForm.select_colored.value,
