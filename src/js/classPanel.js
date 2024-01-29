@@ -6,6 +6,7 @@ import { auth, db, getUserProfile } from "./firebaseConfig";
 
 export default class Panel {
   generatePrintFormMarkup(user) {
+    // console.log(user);
     return `<div class="container print__section">
     <div class='loader'></div>
     <div class="section print__section_wallet">
@@ -69,9 +70,9 @@ export default class Panel {
     </div>
   </div>`;
   }
-  async renderPrintForm() {
-    this._user = await getUserProfile(auth.currentUser.uid);
-    const printFormMarkup = this.generatePrintFormMarkup(this._user);
+
+  async renderPrintForm(userProfile) {
+    const printFormMarkup = this.generatePrintFormMarkup(userProfile);
     document.body.children[1].innerHTML = printFormMarkup;
     this.addPrintFormListener();
   }
@@ -99,6 +100,13 @@ export default class Panel {
         if (!printForm.file.files[0]) throw new Error("No files uploaded yet!");
         if (printForm.file.files[0].type !== "application/pdf")
           throw new Error("Please upload PDF file only.");
+        if (
+          printForm.select_colored.value === "" ||
+          printForm.select_paper.value === ""
+        )
+          throw new Error(
+            "Please ensure all form fields are accurately completed"
+          );
         modal.showModal();
         //show Price Dialog
         this.renderSpinner(modImg);
@@ -109,8 +117,8 @@ export default class Panel {
           true
         );
         this._clear(modImg);
-        console.log(this._user);
-        const wallet = await getUserProfile(this._user.uid);
+        this.renderSpinner(modImg);
+        const wallet = await getUserProfile(auth.currentUser.uid);
         console.log(wallet.wallet);
         showPriceDialog(this.priceFile, wallet.wallet);
       } catch (e) {
@@ -204,6 +212,8 @@ export default class Panel {
           printForm.reset();
           fileLabel.textContent = "Upload a PDF file";
           mywalletBal.textContent = `₱${(walletBal - priceFile).toFixed(2)}`;
+          document.querySelector(".loader").innerHTML = "";
+
           //returns markup of pincode
           function generatePinCodeMarkup(pincode) {
             return pincode
@@ -214,6 +224,124 @@ export default class Panel {
         }
       });
     }
+  }
+  generateUserHistoryMarkup(data) {
+    const trows = data
+      .map(
+        (data) =>
+          `<tr><td class="text-overflow">${
+            data.filename
+          }</td><td class="center-text">${
+            data.filepincode
+          }</td><td class="center-text capitalize">${
+            data.papersize
+          }</td><td class="center-text">${this.formatTimeStamp(
+            data.timestamp
+          )}</td><td class="center-text">${data.status}</td></tr>`
+      )
+      .join("");
+    return `<div class="container table-container">
+    <table id="data-table">
+      <thead>
+        <tr>
+        <th>Filename</th>
+        <th class="center-text">File Pincode</th>
+        <th class="center-text">Paper Size</th>
+        <th class="center-text">Timestamp</th>
+        <th class="center-text">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${trows}
+      </tbody>
+    </table>
+  </div>
+  <!--<div id="pagination">
+    <button id="prevPage">Previous</button>
+    <span id="currentPage">1</span>
+    <button id="nextPage">Next</button>
+  </div> -->`;
+  }
+  async renderHistory(userProfile) {
+    this._pastDocs = JSON.parse(userProfile.history);
+
+    // NOTE: it works because it is still under new userPanel()
+    const allDocs = [...this._activeDocs, ...this._pastDocs];
+    // console.log(allDocs);
+    document.body.children[1].innerHTML =
+      this.generateUserHistoryMarkup(allDocs);
+    //NOTE: VIEW ONLY
+    // this.addRenderHistoryListener(allDocs);
+  }
+  displayPage() {}
+  // addRenderHistoryListener(data) {
+  //   let currentPage = 1;
+  //   const rowsPerPage = 10;
+  //   const totalPages = Math.ceil(data.length / rowsPerPage);
+
+  //   function displayPage(page) {
+  //     const start = (page - 1) * rowsPerPage;
+  //     const end = start + rowsPerPage;
+  //     const pageData = data.slice(start, end);
+
+  //     const tbody = document
+  //       .getElementById("data-table")
+  //       .getElementsByTagName("tbody")[0];
+  //     tbody.innerHTML = ""; // Clear existing rows
+  //     pageData.forEach((item) => {
+  //       let row = tbody.insertRow();
+  //       row.innerHTML = `
+  //   <td class="text-overflow">${item.filename}</td>
+  //       <td class="center-text">${item.filepincode}</td>
+  //       <td class="center-text">${item.papersize}</td>
+  //       <td class="center-text">${formatTimeStamp(item.timestamp)}</td>
+  //       <td class="center-text">${item.status}</td>
+  //       `;
+  //     });
+  //     document.getElementById("currentPage").textContent = page;
+  //     updateButtonStatus();
+  //   }
+  //   document.getElementById("prevPage").addEventListener("click", () => {
+  //     if (currentPage > 1) {
+  //       currentPage--;
+  //       displayPage(currentPage);
+  //     }
+  //   });
+
+  //   document.getElementById("nextPage").addEventListener("click", () => {
+  //     if (currentPage < totalPages) {
+  //       currentPage++;
+  //       displayPage(currentPage);
+  //     }
+  //   });
+  //   function updateButtonStatus() {
+  //     document.getElementById("prevPage").disabled = currentPage === 1;
+  //     document.getElementById("nextPage").disabled = currentPage === totalPages;
+  //   }
+  //   function formatTimeStamp(timestamp) {
+  //     const date = new Date(
+  //       timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000
+  //     );
+  //     const formattedDate =
+  //       String(date.getMonth() + 1).padStart(2, "0") +
+  //       "-" + // Months are 0-based
+  //       String(date.getDate()).padStart(2, "0") +
+  //       "-" +
+  //       date.getFullYear();
+  //     return formattedDate;
+  //   }
+  // }
+  formatTimeStamp(timestamp) {
+    const date = new Date(
+      timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000
+    );
+    const formattedDate =
+      String(date.getMonth() + 1).padStart(2, "0") +
+      "-" + // Months are 0-based
+      String(date.getDate()).padStart(2, "0") +
+      "-" +
+      date.getFullYear();
+    return formattedDate;
   }
   _clear(parentEl) {
     parentEl.innerHTML = "";
@@ -231,6 +359,9 @@ export default class Panel {
   }
   renderError(parentEl, error) {
     this._clear(parentEl);
-    parentEl.insertAdjacentHTML("afterbegin", error);
+    parentEl.insertAdjacentHTML(
+      "afterbegin",
+      `<div class = "errormsg">${error}</div>`
+    );
   }
 }

@@ -1,5 +1,5 @@
-#table-container {
-  margin: 20px 10rem;
+.table-container {
+  margin: 20px 20rem;
   overflow-x: auto;
   font-size: 1.8rem;
 }
@@ -63,4 +63,7 @@ tr:hover {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+}
+.capitalize {
+  text-transform: capitalize;
 }

@@ -31,36 +31,40 @@ class userPanel extends classPanel {
   }
   async initUserData(uid) {
     try {
-      const q = query(
-        collection(db, "printForms"),
-        where("userID", "==", uid),
-        orderBy("timestamp", "desc")
-      );
-      onSnapshot(q, (querySnapshot) => {
-        const docs = [];
-        querySnapshot.forEach((doc) => {
-          docs.push({
-            filename: doc.data().filename,
-            filepincode: doc.data().filePinCode,
-            papersize: doc.data().paperSize,
-            timestamp: doc.data().timestamp,
-            status: doc.data().status,
-          });
-        });
-        this._activeDocs = docs; // update active docs array
-      });
-      this._userData = await getUserProfile(uid);
-      this._pastDocs = JSON.parse(this._userData.history);
-      console.log(this._userData);
-      this.render();
+      //NOTE: if i put this._userProfile = await getUserProfile(auth.currentUser.uid); here, it will not get the updated data(wallet,history)
+      this.getLiveActiveDocs(uid);
+      await this.render();
     } catch (e) {
       alert(e);
     }
   }
-  render() {
+  getLiveActiveDocs(uid) {
+    const q = query(
+      collection(db, "printForms"),
+      where("userID", "==", uid),
+      orderBy("timestamp", "desc")
+    );
+    onSnapshot(q, (querySnapshot) => {
+      const docs = [];
+      querySnapshot.forEach((doc) => {
+        docs.push({
+          filename: doc.data().filename,
+          filepincode: doc.data().filePinCode,
+          papersize: doc.data().paperSize,
+          timestamp: doc.data().timestamp,
+          status: doc.data().status,
+        });
+      });
+      this._activeDocs = docs; // update active docs array
+      // console.log(this._activeDocs);
+    });
+  }
+  async render() {
     this._clear(document.body);
     this.renderHeader();
-    this.renderPrintForm();
+    this.renderSpinner(document.body.children[1]);
+    this._userProfile = await getUserProfile(auth.currentUser.uid);
+    this.renderPrintForm(this._userProfile);
   }
   renderHeader() {
     document.body.innerHTML = this._header;
@@ -70,11 +74,15 @@ class userPanel extends classPanel {
     const upload = document.querySelector(".upload");
     const history = document.querySelector(".history");
     const logout = document.querySelector(".logout");
-    upload.addEventListener("click", () => {
-      this.renderPrintForm();
+    upload.addEventListener("click", async () => {
+      this.renderSpinner(document.body.children[1]);
+      this._userProfile = await getUserProfile(auth.currentUser.uid);
+      this.renderPrintForm(this._userProfile);
     });
     history.addEventListener("click", async () => {
-      await this.renderHistory();
+      this.renderSpinner(document.body.children[1]);
+      this._userProfile = await getUserProfile(auth.currentUser.uid);
+      await this.renderHistory(this._userProfile);
     });
     logout.addEventListener("click", async () => {
       try {
@@ -84,22 +92,75 @@ class userPanel extends classPanel {
       }
     });
   }
-  async renderHistory() {
-    const allDocs = [...this._activeDocs, ...this._pastDocs];
-    console.log(allDocs);
-    document.body.children[1].innerHTML = `<h6>${this._userData}</h6>`;
-  }
-  formatTimeStamp(timestamp) {
-    const date = new Date(
-      timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000
-    );
-    const formattedDate =
-      String(date.getMonth() + 1).padStart(2, "0") +
-      "-" + // Months are 0-based
-      String(date.getDate()).padStart(2, "0") +
-      "-" +
-      date.getFullYear();
-    return formattedDate;
-  }
 }
 export default userPanel;
+//BUG: for next update idea
+// async getLiveUserProfile(uid) {
+//   const queryUserDocHistory = query(
+//     collection(db, "users"),
+//     where("uid", "==", uid)
+//   );
+//   onSnapshot(queryUserDocHistory, (querySnapshot) => {
+//     this._userProfile;
+//     querySnapshot.forEach((doc) => {
+//       this._userProfile = {
+//         history: doc.data().history,
+//         isAdmin: doc.data().isAdmin,
+//         password: doc.data().password,
+//         secretpin: doc.data().secretpin,
+//         uid: doc.data().uid,
+//         users: doc.data().users,
+//         wallet: doc.data().wallet,
+//       };
+//     });
+//   });
+// }
+// BUG: REMOVED, getting snapshot of history when uploading printform because of .wallet update
+// getDataLive(uid) {
+//   const queryUserDocActive = query(
+//     collection(db, "printForms"),
+//     where("userID", "==", uid),
+//     orderBy("timestamp", "desc")
+//   );
+//   const queryUserDocHistory = query(
+//     collection(db, "users"),
+//     where("uid", "==", uid)
+//   );
+//   this._unSubscribeActive = onSnapshot(
+//     queryUserDocActive,
+//     (querySnapshot) => {
+//       const docs = [];
+//       querySnapshot.forEach((doc) => {
+//         docs.push({
+//           filename: doc.data().filename,
+//           filepincode: doc.data().filePinCode,
+//           papersize: doc.data().paperSize,
+//           timestamp: doc.data().timestamp,
+//           status: doc.data().status,
+//         });
+//       });
+//       this._activeDocs = docs; // update active docs array
+//       this._allDocs = [...this._activeDocs];
+//       console.log(`active:`);
+//       asd(this._allDocs);
+//     }
+//   );
+//   this._unSubscribeHistory = onSnapshot(
+//     queryUserDocHistory,
+//     (querySnapshot) => {
+//       this._pastDocs = [];
+//       querySnapshot.forEach((doc) => {
+//         this._pastDocs = [...JSON.parse(doc.data().history)];
+//       });
+//       this._allDocs = [...this._activeDocs, ...this._pastDocs]; // update user's past docs array
+//       console.log(`active + user history:`);
+//       asd(this._allDocs);
+//     }
+//   );
+//   function asd(asd) {
+//     console.log(asd);
+//   }
+// }
+// toggleSubscribe(subscribe) {
+//   subscribe();
+// }
