@@ -25,8 +25,9 @@ class userPanel extends classPanel {
     </ul>
   </nav>
 </header><main></main>`;
-  constructor(uid) {
+  constructor(uid, isAdmin) {
     super();
+    if (!isAdmin) this.renderHeader();
     this.initUserData(uid);
   }
   async initUserData(uid) {
@@ -60,9 +61,7 @@ class userPanel extends classPanel {
     });
   }
   async render() {
-    this._clear(document.body);
-    this.renderHeader();
-    this.renderSpinner(document.body.children[1]);
+    console.log(auth.currentUser.uid);
     this._userProfile = await getUserProfile(auth.currentUser.uid);
     this.renderPrintForm(this._userProfile);
   }

@@ -26,8 +26,7 @@ const storage = getStorage(app);
 //login account
 async function signIn(email, password) {
   try {
-    const credential = await signInWithEmailAndPassword(auth, email, password);
-    const userdata = credential.user;
+    await signInWithEmailAndPassword(auth, email, password);
   } catch (e) {
     throw e;
   }
@@ -41,7 +40,7 @@ async function signup(email, password, secretpin) {
       password
     );
     const userdata = credential.user;
-    newUserDB(userdata, password, secretpin);
+    await newUserDB(userdata, password, secretpin);
   } catch (e) {
     throw e;
   }

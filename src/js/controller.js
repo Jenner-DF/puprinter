@@ -3,11 +3,13 @@ import {
   getUserDetails,
   getUserProfile,
   isAdmin,
+  userSignOut,
 } from "./firebaseConfig";
 import userPanel from "./userPanel";
 import loginPanel from "./login";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import icons from "../img/icons.svg";
+import adminPanel from "./adminPanel";
 
 // let currentPage = 1;
 // const rowsPerPage = 5;
@@ -77,11 +79,16 @@ const spinner = ` <div class="spinner">
 onAuthStateChanged(auth, async (user) => {
   document.body.insertAdjacentHTML("afterbegin", "");
   document.body.insertAdjacentHTML("afterbegin", spinner);
+  document.body.innerHTML = "";
+  document.body.innerHTML = spinner;
   if (user) {
     console.log(user);
     const admin = await getUserProfile(user.uid);
+    console.log(admin.isAdmin);
     //NOTE: NO ADMIN PAGE YET!
-    admin.isAdmin ? null : new userPanel(user.uid);
+    admin.isAdmin
+      ? new adminPanel(user.uid, admin.isAdmin)
+      : new userPanel(user.uid, admin.isAdmin);
   } else {
     loginPanel.render();
   }

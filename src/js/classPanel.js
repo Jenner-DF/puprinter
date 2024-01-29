@@ -358,7 +358,7 @@ export default class Panel {
     parentEl.insertAdjacentHTML("afterbegin", spinnerMarkup);
   }
   renderError(parentEl, error) {
-    this._clear(parentEl);
+    // this._clear(parentEl);
     parentEl.insertAdjacentHTML(
       "afterbegin",
       `<div class = "errormsg">${error}</div>`

@@ -112,9 +112,10 @@ class loginPanel extends Panel {
       const email = loginForm.email.value;
       const password = loginForm.password.value;
       try {
-        this._clear(document.body);
+        // this.renderSpinner(textheader_error_login);
         await signIn(email, password);
       } catch (e) {
+        this._clear(textheader_error_login);
         this.renderError(textheader_error_login, e);
       }
     });
@@ -128,14 +129,15 @@ class loginPanel extends Panel {
         this.renderSpinner(textheader_error_register);
         await signup(email, password, secretpin);
         register_succesful();
-        await userSignOut();
       } catch (e) {
+        this._clear(textheader_error_register);
         this.renderError(textheader_error_register, e);
       }
     });
     function register_succesful() {
       textheader_error_register.innerHTML = "";
-      textheader_error_register.innerHTML = "Account Registered Successfully!";
+      textheader_error_register.innerHTML =
+        "Account Registered Successfully! Redirecting...";
     }
   }
 }
