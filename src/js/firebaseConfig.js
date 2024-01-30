@@ -94,6 +94,8 @@ async function getUserDocs(uid) {
 }
 
 export {
+  query,
+  orderBy,
   serverTimestamp,
   storage,
   doc,

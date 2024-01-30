@@ -262,18 +262,19 @@ export default class Panel {
     <button id="nextPage">Next</button>
   </div> -->`;
   }
+
   async renderHistory(userProfile) {
     this._pastDocs = JSON.parse(userProfile.history);
 
     // NOTE: it works because it is still under new userPanel()
     const allDocs = [...this._activeDocs, ...this._pastDocs];
-    // console.log(allDocs);
+    console.log(allDocs);
     document.body.children[1].innerHTML =
       this.generateUserHistoryMarkup(allDocs);
     //NOTE: VIEW ONLY
     // this.addRenderHistoryListener(allDocs);
   }
-  displayPage() {}
+  // NOTE:VIEW ONLY
   // addRenderHistoryListener(data) {
   //   let currentPage = 1;
   //   const rowsPerPage = 10;

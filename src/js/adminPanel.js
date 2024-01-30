@@ -4,6 +4,7 @@ import {
   orderBy,
   query,
   where,
+  getDocs,
 } from "firebase/firestore";
 import {
   auth,
@@ -37,7 +38,73 @@ class adminPanel extends userPanel {
     super(uid, isAdmin);
 
     this.renderHeader();
+    this.initAdminData();
   }
+  async initAdminData() {
+    // await this.initDataActiveDocs()
+  }
+  generateDBMarkup(data) {
+    const trows = data
+      .map(
+        (data) =>
+          `<tr>
+        <td class="text-overflow">${data.userID}</td>
+        <td class="center-text text-overflow">${data.filename}</td>
+        <td class="center-text">${data.filepincode}</td>
+        <td class="center-text">₱${data.price.toFixed(2)}</td>
+        <td class="center-text capitalize">${data.colored}</td>
+        <td class="center-text capitalize">${data.papersize}</td>
+        <td class="center-text">${this.formatTimeStamp(data.timestamp)} </td>
+        <td class="center-text text-overflow">${data.fileUrl}</td>
+        <td class="center-text">${data.status}</td>
+        </tr>`
+      )
+      .join("");
+    return `<div class="container table-container">
+  <table id="data-table">
+    <thead>
+      <tr>
+      <th class="center-text">User ID</th>
+      <th class="center-text">File Name</th>
+      <th class="center-text">File PIN Code</th>
+      <th class="center-text">Price</th>
+      <th class="center-text">Print Color</th>
+      <th class="center-text">Paper Size</th>
+      <th class="center-text">Timestamp</th>
+      <th class="center-text">File URL</th>
+      <th class="center-text">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${trows}
+    </tbody>
+  </table>
+</div>
+<!--<div id="pagination">
+  <button id="prevPage">Previous</button>
+  <span id="currentPage">1</span>
+  <button id="nextPage">Next</button>
+</div> -->`;
+  }
+
+  async renderDB() {
+    const q = query(collection(db, "printForms"), orderBy("timestamp", "desc"));
+    const snapshot = await getDocs(q);
+    const printFormDocs = snapshot.docs.map((doc) => ({
+      userID: doc.data().userID,
+      filename: doc.data().filename,
+      fileUrl: doc.data().fileURL,
+      filepincode: doc.data().filePinCode,
+      colored: doc.data().colored,
+      papersize: doc.data().paperSize,
+      price: doc.data().price,
+      status: doc.data().status,
+      timestamp: doc.data().timestamp,
+    }));
+    document.body.children[1].innerHTML = this.generateDBMarkup(printFormDocs);
+    // renderDBListener()
+  }
+
   renderHeader() {
     document.body.innerHTML = this._header;
     this.addHeaderListeners();
@@ -57,10 +124,11 @@ class adminPanel extends userPanel {
       this.renderPrintForm(this._userProfile);
     });
     analytics.addEventListener("click", () => {
-      console.log(`hello world!`);
+      console.log(`hello wasdorld!`);
     });
     database.addEventListener("click", async () => {
-      console.log(`hello wolrd!`);
+      this.renderSpinner(document.body.children[1]);
+      await this.renderDB();
     });
     history.addEventListener("click", async () => {
       this.renderSpinner(document.body.children[1]);
