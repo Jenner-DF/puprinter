@@ -80,7 +80,7 @@ export default class PrintForm {
     let existingPdfBytes;
     if (!local) {
       //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
-      url = `https://justcors.com/tl_628dd42/${file}`;
+      url = `https://justcors.com/tl_578de03/${file}`;
       existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
     } else {
       existingPdfBytes = await file.arrayBuffer();
