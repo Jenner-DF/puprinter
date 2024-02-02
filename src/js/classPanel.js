@@ -6,11 +6,11 @@ import { auth, db, getUserProfile } from "./firebaseConfig";
 
 export default class Panel {
   generatePrintFormMarkup(user) {
-    // console.log(user);
+    // console.log(user); NOTE: make an object and set it to ${} so without signing in is ok! or divide wallet section
     return `<div class="container print__section">
     <div class='loader'></div>
     <div class="section print__section_wallet">
-      <div class="printForm__text">Hello, ${user.users.split("@")[0]}!</div>
+      <div class="printForm__text">Hello, ${user.displayName}!</div>
       <div class="wallet">
         <p class="wallet__text">Available Balance:</p>
         <div class="wallet__balance">₱${user.wallet.toFixed(2)}</div>
@@ -216,6 +216,8 @@ export default class Panel {
 
           //returns markup of pincode
           function generatePinCodeMarkup(pincode) {
+            console.log(pincode);
+            console.log(typeof pincode);
             return pincode
               .split("")
               .map((digit) => `<p class="code">${digit}</p>`)
@@ -226,18 +228,18 @@ export default class Panel {
     }
   }
   generateUserHistoryMarkup(data) {
+    //NOTE: merge history of admin and user, set flags to get which data is displayed
     const trows = data
       .map(
         (data) =>
-          `<tr><td class="text-overflow">${
-            data.filename
-          }</td><td class="center-text">${
-            data.filepincode
-          }</td><td class="center-text capitalize">${
-            data.papersize
-          }</td><td class="center-text">${this.formatTimeStamp(
-            data.timestamp
-          )}</td><td class="center-text">${data.status}</td></tr>`
+          `<tr>
+          <td class="text-overflow">${data.filename}</td>
+          <td class="center-text">${data.filepincode}</td>
+          <td class="center-text capitalize">${data.paperType}</td>
+          <td class="center-text capitalize">${data.colorOption}</td>
+          <td class="center-text">${this.formatTimeStamp(data.timestamp)}</td>
+          <td class="center-text">${data.status}</td>
+          </tr>`
       )
       .join("");
     return `<div class="container table-container">
@@ -246,8 +248,9 @@ export default class Panel {
         <tr>
         <th>Filename</th>
         <th class="center-text">File Pincode</th>
-        <th class="center-text">Paper Size</th>
-        <th class="center-text">Timestamp</th>
+        <th class="center-text">Paper Type</th>
+        <th class="center-text">Color Option</th>
+        <th class="center-text">Date Uploaded</th>
         <th class="center-text">Status</th>
         </tr>
       </thead>
@@ -270,68 +273,9 @@ export default class Panel {
     const allDocs = [...this._activeDocs, ...this._pastDocs];
     console.log(allDocs);
     document.body.children[1].innerHTML =
-      this.generateUserHistoryMarkup(allDocs);
-    //NOTE: VIEW ONLY
-    // this.addRenderHistoryListener(allDocs);
+      this.generateUserHistoryMarkup(allDocs); //NOTE: VIEW ONLY
   }
-  // NOTE:VIEW ONLY
-  // addRenderHistoryListener(data) {
-  //   let currentPage = 1;
-  //   const rowsPerPage = 10;
-  //   const totalPages = Math.ceil(data.length / rowsPerPage);
 
-  //   function displayPage(page) {
-  //     const start = (page - 1) * rowsPerPage;
-  //     const end = start + rowsPerPage;
-  //     const pageData = data.slice(start, end);
-
-  //     const tbody = document
-  //       .getElementById("data-table")
-  //       .getElementsByTagName("tbody")[0];
-  //     tbody.innerHTML = ""; // Clear existing rows
-  //     pageData.forEach((item) => {
-  //       let row = tbody.insertRow();
-  //       row.innerHTML = `
-  //   <td class="text-overflow">${item.filename}</td>
-  //       <td class="center-text">${item.filepincode}</td>
-  //       <td class="center-text">${item.papersize}</td>
-  //       <td class="center-text">${formatTimeStamp(item.timestamp)}</td>
-  //       <td class="center-text">${item.status}</td>
-  //       `;
-  //     });
-  //     document.getElementById("currentPage").textContent = page;
-  //     updateButtonStatus();
-  //   }
-  //   document.getElementById("prevPage").addEventListener("click", () => {
-  //     if (currentPage > 1) {
-  //       currentPage--;
-  //       displayPage(currentPage);
-  //     }
-  //   });
-
-  //   document.getElementById("nextPage").addEventListener("click", () => {
-  //     if (currentPage < totalPages) {
-  //       currentPage++;
-  //       displayPage(currentPage);
-  //     }
-  //   });
-  //   function updateButtonStatus() {
-  //     document.getElementById("prevPage").disabled = currentPage === 1;
-  //     document.getElementById("nextPage").disabled = currentPage === totalPages;
-  //   }
-  //   function formatTimeStamp(timestamp) {
-  //     const date = new Date(
-  //       timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000
-  //     );
-  //     const formattedDate =
-  //       String(date.getMonth() + 1).padStart(2, "0") +
-  //       "-" + // Months are 0-based
-  //       String(date.getDate()).padStart(2, "0") +
-  //       "-" +
-  //       date.getFullYear();
-  //     return formattedDate;
-  //   }
-  // }
   formatTimeStamp(timestamp) {
     const date = new Date(
       timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000
@@ -359,7 +303,7 @@ export default class Panel {
     parentEl.insertAdjacentHTML("afterbegin", spinnerMarkup);
   }
   renderError(parentEl, error) {
-    // this._clear(parentEl);
+    this._clear(parentEl);
     parentEl.insertAdjacentHTML(
       "afterbegin",
       `<div class = "errormsg">${error}</div>`

@@ -9,10 +9,17 @@ import {
   db,
   query,
   orderBy,
+  runTransaction,
+  doc,
+  app,
 } from "./firebaseConfig";
 import userPanel from "./userPanel";
 import loginPanel from "./login";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  browserSessionPersistence,
+  onAuthStateChanged,
+  signOut,
+} from "firebase/auth";
 import icons from "../img/icons.svg";
 import adminPanel from "./adminPanel";
 
@@ -263,6 +270,26 @@ function formatTimeStamp(timestamp) {
 // it();
 
 //BUG:
+
+// const newPIN = Math.floor(1000 + Math.random() * 9000).toString(); // Generate PIN only 1000-9999 (9000pins)
+// const newPIN = "6596";
+// runTransaction(db, async (transaction) => {
+//   console.log(`MY NEW PIN IS: ${newPIN}`);
+//   const docRef = doc(db, "printForms", newPIN);
+//   console.log(docRef);
+//   const newdoc = await transaction.get(docRef);
+//   console.log(newdoc);
+//   if (!newdoc.exists()) {
+//     // The PIN is unique, proceed to use it
+//     // this._docRef = docRef;
+//     console.log(docRef);
+//     transaction.set(docRef, { status: "Ready to PRIasdNT!" });
+//     success = true;
+//     return String(newPIN);
+//   }
+//   console.log("existing PIN try again.");
+// });
+
 // NOTE: APP;
 const spinner = ` <div class="spinner">
 <svg>
@@ -278,7 +305,6 @@ onAuthStateChanged(auth, async (user) => {
     console.log(user);
     const admin = await getUserProfile(user.uid);
     console.log(admin.isAdmin);
-    //NOTE: NO ADMIN PAGE YET!
     admin.isAdmin
       ? new adminPanel(user.uid, admin.isAdmin)
       : new userPanel(user.uid, admin.isAdmin);
@@ -286,6 +312,7 @@ onAuthStateChanged(auth, async (user) => {
     loginPanel.render();
   }
 });
+//NOTE: APP;
 
 // initLogin();
 // export function initLogin() {

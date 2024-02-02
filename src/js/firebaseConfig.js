@@ -2,9 +2,9 @@ import { initializeApp } from "firebase/app";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 //prettier-ignore
 import {getFirestore,collection,getDocs,addDoc,deleteDoc,doc,onSnapshot,query,where,orderBy,serverTimestamp,Timestamp,
-getDoc,updateDoc,setDoc} from "firebase/firestore";
+getDoc,updateDoc,setDoc,runTransaction} from "firebase/firestore";
 //prettier-ignore
-import {getAuth,createUserWithEmailAndPassword,signOut,signInWithEmailAndPassword} from "firebase/auth";
+import {getAuth,createUserWithEmailAndPassword,signOut,signInWithEmailAndPassword, SignInMethod, signInWithPopup,GoogleAuthProvider,getAdditionalUserInfo} from "firebase/auth";
 const firebaseConfig = {
   apiKey: "AIzaSyClDV5K8rNhF8u-QWJwzv3iWXvYDsR2xto",
   authDomain: "puprinter-efcd0.firebaseapp.com",
@@ -22,29 +22,33 @@ const auth = getAuth();
 const db = getFirestore(app);
 //init storage
 const storage = getStorage(app);
-
+//init googleSignin
+const provider = new GoogleAuthProvider();
 //login account
-async function signIn(email, password) {
+async function signIn() {
   try {
-    await signInWithEmailAndPassword(auth, email, password);
+    // await signInWithEmailAndPassword(auth, email, password);
+    const result = await signInWithPopup(auth, provider);
+    const userinfo = getAdditionalUserInfo(result);
+    if (userinfo.isNewUser) await newUserDB(result.user);
   } catch (e) {
-    throw e;
+    throw e.message;
   }
 }
 //register account
-async function signup(email, password, secretpin) {
-  try {
-    const credential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    const userdata = credential.user;
-    await newUserDB(userdata, password, secretpin);
-  } catch (e) {
-    throw e;
-  }
-}
+// async function signup(email, password, secretpin) {
+//   try {
+//     const credential = await createUserWithEmailAndPassword(
+//       auth,
+//       email,
+//       password
+//     );
+//     const userdata = credential.user;
+//     await newUserDB(userdata, password, secretpin);
+//   } catch (e) {
+//     throw e;
+//   }
+// }
 // sign out account
 async function userSignOut() {
   try {
@@ -54,18 +58,18 @@ async function userSignOut() {
   }
 }
 //adds and checks to users db for duplicate
-async function newUserDB(user, password, secretpin) {
+async function newUserDB(user) {
   try {
     await setDoc(
       doc(db, "users", user.uid),
       {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
         isAdmin: false,
-        users: user.email,
-        password: password,
-        secretpin: secretpin,
         wallet: 0,
         history: "[]",
-        uid: user.uid,
+        AccountCreationDate: serverTimestamp(),
       },
       { merge: true }
     );
@@ -94,6 +98,7 @@ async function getUserDocs(uid) {
 }
 
 export {
+  app,
   query,
   orderBy,
   serverTimestamp,
@@ -114,4 +119,5 @@ export {
   signup,
   isAdmin,
   userSignOut,
+  runTransaction,
 };

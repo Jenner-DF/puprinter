@@ -13,68 +13,11 @@ class loginPanel extends Panel {
 <main class="main container">
   <form class="signIn showform">
     <div class="form__textheader">Sign in your account</div>
-
     <div class="form__textheader_error error_signIn"></div>
-    <div class="form">
-      <input
-        type="email"
-        name="email"
-        placeholder="Email address"
-        class="form__entryfield"
-        required
-      />
-      <input
-        type="password"
-        name="password"
-        placeholder="Password"
-        class="form__entryfield"
-        required
-      />
-      <div class="form__btns">
-        <button type="submit" class="btn form__btn_login btn__main">
-          Login
-        </button>
-        <button type="button" class="btn form__btn_swapform">Register</button>
-      </div>
-    </div>
-  </form>
-  <form class="signUp">
-    <div class="form__textheader">Create your account</div>
-    <div class="form__textheader_error error_signUp"></div>
-
-    <div class="form">
-      <input
-        type="email"
-        name="email"
-        placeholder="Email address"
-        class="form__entryfield"
-        required
-      />
-      <input
-        type="password"
-        name="password"
-        placeholder="Password"
-        class="form__entryfield"
-        required
-      />
-      <input
-        type="tel"
-        name="secretpin"
-        placeholder="Secret 5-digit Pin Code"
-        class="form__entryfield"
-        pattern="\\d{5}"
-        minlength="5"
-        maxlength="5"
-        required
-      />
-      <div class="form__btns">
-        <button type="submit" class="btn form__btn_register btn__main">
-          Register
-        </button>
-        <button type="button" class="btn form__btn_swapform">Login</button>
-      </div>
-    </div>
-  </form>
+    <button type="submit" class="btn form__btn_login btn__main">
+      <h3>Login with Google</h3>
+    </button>
+    <button type="button" class="btn form__btn_swapform printnow">Print Now!</button>
   <div class="disclaimer">
     <p class="disclaimer__text">
       Disclaimer: By using our services, you agree to provide accurate
@@ -95,50 +38,23 @@ class loginPanel extends Panel {
     this.addLoginListener();
   }
   addLoginListener() {
-    const registerForm = document.querySelector(".signUp");
-    const loginForm = document.querySelector(".signIn");
-    const btnSwapForms = document.querySelectorAll(".form__btn_swapform");
+    const printnow = document.querySelector(".printnow");
+    const login = document.querySelector(".signIn");
     const textheader_error_login = document.querySelector(".error_signIn");
-    const textheader_error_register = document.querySelector(".error_signUp");
-    btnSwapForms.forEach(function (btnSwapForm) {
-      btnSwapForm.addEventListener("click", function (e) {
-        e.preventDefault();
-        registerForm.classList.toggle("showform");
-        loginForm.classList.toggle("showform");
-      });
-    });
-    loginForm.addEventListener("submit", async (e) => {
+    login.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = loginForm.email.value;
-      const password = loginForm.password.value;
       try {
-        // this.renderSpinner(textheader_error_login);
-        await signIn(email, password);
+        await signIn();
       } catch (e) {
         this._clear(textheader_error_login);
         this.renderError(textheader_error_login, e);
       }
     });
-    registerForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = registerForm.email.value;
-      const password = registerForm.password.value;
-      const secretpin = registerForm.secretpin.value;
-      console.log(email, password, secretpin);
-      try {
-        this.renderSpinner(textheader_error_register);
-        await signup(email, password, secretpin);
-        register_succesful();
-      } catch (e) {
-        this._clear(textheader_error_register);
-        this.renderError(textheader_error_register, e);
-      }
+    printnow.addEventListener("click", (e) => {
+      this.renderError(textheader_error_login, `Stay tuned!`);
+
+      // this.renderPrintForm(null); //BUG: remove args to enable without signing in
     });
-    function register_succesful() {
-      textheader_error_register.innerHTML = "";
-      textheader_error_register.innerHTML =
-        "Account Registered Successfully! Redirecting...";
-    }
   }
 }
 export default new loginPanel();

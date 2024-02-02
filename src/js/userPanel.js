@@ -51,7 +51,8 @@ class userPanel extends classPanel {
         docs.push({
           filename: doc.data().filename,
           filepincode: doc.data().filePinCode,
-          papersize: doc.data().paperSize,
+          paperType: doc.data().paperType,
+          colorOption: doc.data().colorOption,
           timestamp: doc.data().timestamp,
           status: doc.data().status,
         });

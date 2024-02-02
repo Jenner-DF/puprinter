@@ -1,47 +1,59 @@
 import { PDFDocument } from "pdf-lib";
 //prettier-ignore
-import { storage,addDoc,doc,getDoc,getDocs,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes, getUserProfile } from "./firebaseConfig";
+import { storage,addDoc,doc,getDoc,getDocs,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes, getUserProfile,runTransaction } from "./firebaseConfig";
 import { updateDoc } from "firebase/firestore";
 //NOTE: JUSTCORS IS IN URL WHEN DEPLOYING LIVE!
 //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
 
 export default class PrintForm {
-  _colRef = collection(db, "printForms");
-  constructor(file, paperColor, paperSize) {
+  constructor(file, colorOption, paperType) {
     this.userID = auth.currentUser.uid;
-    this.paperColor = paperColor;
+    this.colorOption = colorOption;
     this.file = file;
-    this.paperSize = paperSize;
-    console.log(this.userID, this.paperColor, this.file, this.paperSize);
+    this.paperType = paperType;
+    console.log(this.userID, this.colorOption, this.file, this.paperType);
   }
-  static async createInstance(file, colored, paperSize) {
-    const instance = new PrintForm(file, colored, paperSize);
+  static async createInstance(file, colorOption, paperType) {
+    const instance = new PrintForm(file, colorOption, paperType);
     await instance._exportPrintFormToDB();
     return instance.pincode;
   }
   async _exportPrintFormToDB() {
     try {
       this._userData = await getUserProfile(auth.currentUser.uid);
-      this.fileurl = await this._generateFileUrl();
-      this.pincode = await this._generateFilePinCode();
+      (this.pincode = await this._generateFilePinCode()),
+        (this.fileurl = await this._generateFileUrl());
       this.price = await PrintForm._generatePriceAmount(
         this.fileurl,
-        this.paperSize,
-        this.paperColor
+        this.paperType,
+        this.colorOption
       );
-      await addDoc(this._colRef, {
-        userID: auth.currentUser.uid,
-        filename: this.file.name,
-        fileURL: this.fileurl,
-        paperSize: this.paperSize,
-        userSecretPinCode: this._userData.secretpin,
-        price: this.price,
-        colored: this.paperColor,
-        filePinCode: this.pincode,
-        status: "Ready for Printing",
-        timestamp: serverTimestamp(),
+      await runTransaction(db, async (transaction) => {
+        transaction.set(this._docRef, {
+          userID: auth.currentUser.uid,
+          filename: this.file.name,
+          fileURL: this.fileurl,
+          paperType: this.paperType,
+          price: this.price,
+          colorOption: this.colorOption,
+          status: "Ready for Printing",
+          timestamp: serverTimestamp(),
+        });
       });
       await this.updateUserWallet();
+
+      // await addDoc(this._docRef, {
+      //   userID: auth.currentUser.uid,
+      //   filename: this.file.name,
+      //   fileURL: this.fileurl,
+      //   paperType: this.paperType,
+      //   userSecretPinCode: this._userData.secretpin,
+      //   price: this.price,
+      //   colorOption: this.colorOption,
+      //   filePinCode: this.pincode,
+      //   status: "Ready for Printing",
+      //   timestamp: serverTimestamp(),
+      // });
     } catch (e) {
       alert(e);
     }
@@ -53,7 +65,7 @@ export default class PrintForm {
     });
   }
   async _generateFileUrl() {
-    const storageRef = ref(storage, String(this.userID)); //path
+    const storageRef = ref(storage, this.pincode); //path
     const fileRef = ref(storageRef, this.file.name);
     // 'file' comes from the Blob(no filename) or File API
     try {
@@ -65,22 +77,42 @@ export default class PrintForm {
     }
   }
   async _generateFilePinCode() {
-    const snapshot = await getDocs(collection(db, "printForms"));
-    console.log(snapshot);
-    const pincode = String(snapshot.size + 1).padStart(4, "0");
-    return pincode;
+    let attempt = 0;
+    let success = false;
+    while (!success && attempt < 10) {
+      attempt++; // Limit attempts to prevent infinite loops
+      const newPIN = Math.floor(1000 + Math.random() * 9000).toString(); // Generate PIN only 1000-9999 (9000pins)
+      let pincode;
+      try {
+        pincode = await runTransaction(db, async (transaction) => {
+          const docRef = doc(db, "printForms", newPIN);
+          const newdoc = await transaction.get(docRef);
+          if (!newdoc.exists()) {
+            this._docRef = docRef; // The PIN is unique, proceed to use it
+            success = true;
+            return String(newPIN);
+          }
+        });
+      } catch (e) {
+        throw e;
+      }
+      if (success) return pincode;
+    }
+    if (!success) {
+      throw new Error("Failed to assign a unique PIN after several attempts.");
+    }
   }
   static async _generatePriceAmount(file, paper, color, local = false) {
     // short = ₱2 || long = ₱3 &&
-    // colored = +₱3 || grayscale = +₱0
-    const papersize = paper === "short" ? 2 : 3;
-    const colored = color === "colored" ? 3 : 0;
-    this.pricemultiplier = papersize + colored;
+    // colorOption = +₱3 || grayscale = +₱0
+    const paperType = paper === "short" ? 2 : 3;
+    const colorOption = color === "colored" ? 3 : 0;
+    this.pricemultiplier = paperType + colorOption;
     let url;
     let existingPdfBytes;
     if (!local) {
       //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
-      url = `https://justcors.com/tl_578de03/${file}`;
+      url = `https://justcors.com/tl_9bff6ec/${file}`;
       existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
     } else {
       existingPdfBytes = await file.arrayBuffer();
