@@ -12,6 +12,7 @@ import {
   runTransaction,
   doc,
   app,
+  handleRedirectAuth,
 } from "./firebaseConfig";
 import userPanel from "./userPanel";
 import loginPanel from "./login";
@@ -297,6 +298,7 @@ const spinner = ` <div class="spinner">
 </svg>
 </div>`;
 onAuthStateChanged(auth, async (user) => {
+  await handleRedirectAuth();
   document.body.insertAdjacentHTML("afterbegin", "");
   document.body.insertAdjacentHTML("afterbegin", spinner);
   document.body.innerHTML = "";

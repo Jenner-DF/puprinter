@@ -4,7 +4,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {getFirestore,collection,getDocs,addDoc,deleteDoc,doc,onSnapshot,query,where,orderBy,serverTimestamp,Timestamp,
 getDoc,updateDoc,setDoc,runTransaction} from "firebase/firestore";
 //prettier-ignore
-import {getAuth,createUserWithEmailAndPassword,signOut,signInWithEmailAndPassword, SignInMethod, signInWithPopup,GoogleAuthProvider,getAdditionalUserInfo, signInWithRedirect} from "firebase/auth";
+import {getAuth,createUserWithEmailAndPassword,signOut,signInWithEmailAndPassword, SignInMethod, signInWithPopup,GoogleAuthProvider,getAdditionalUserInfo, signInWithRedirect, getRedirectResult} from "firebase/auth";
 const firebaseConfig = {
   apiKey: "AIzaSyClDV5K8rNhF8u-QWJwzv3iWXvYDsR2xto",
   authDomain: "puprinter-efcd0.firebaseapp.com",
@@ -24,19 +24,32 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 //init googleSignin
 const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: "select_account" });
-
 //login account
 async function signIn() {
   try {
     // await signInWithEmailAndPassword(auth, email, password);
     const result = await signInWithRedirect(auth, provider);
-    const userinfo = getAdditionalUserInfo(result);
-    if (userinfo.isNewUser) await newUserDB(result.user);
+    console.log("this is my res!!!");
+    console.log(userResult);
+    console.log(getAdditionalUserInfo(userResult));
+    // const userinfo = getAdditionalUserInfo(result);
   } catch (e) {
     throw e.message;
   }
 }
+async function handleRedirectAuth() {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result) {
+      const userinfo = getAdditionalUserInfo(result);
+      if (userinfo.isNewUser)
+        if (userinfo.isNewUser) await newUserDB(result.user);
+    }
+  } catch (e) {
+    throw e;
+  }
+}
+
 //register account
 // async function signup(email, password, secretpin) {
 //   try {
@@ -122,4 +135,5 @@ export {
   isAdmin,
   userSignOut,
   runTransaction,
+  handleRedirectAuth,
 };
