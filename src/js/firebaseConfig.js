@@ -4,7 +4,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {getFirestore,collection,getDocs,addDoc,deleteDoc,doc,onSnapshot,query,where,orderBy,serverTimestamp,Timestamp,
 getDoc,updateDoc,setDoc,runTransaction} from "firebase/firestore";
 //prettier-ignore
-import {getAuth,createUserWithEmailAndPassword,signOut,signInWithEmailAndPassword, SignInMethod, signInWithPopup,GoogleAuthProvider,getAdditionalUserInfo} from "firebase/auth";
+import {getAuth,createUserWithEmailAndPassword,signOut,signInWithEmailAndPassword, SignInMethod, signInWithPopup,GoogleAuthProvider,getAdditionalUserInfo, signInWithRedirect} from "firebase/auth";
 const firebaseConfig = {
   apiKey: "AIzaSyClDV5K8rNhF8u-QWJwzv3iWXvYDsR2xto",
   authDomain: "puprinter-efcd0.firebaseapp.com",
@@ -24,11 +24,13 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 //init googleSignin
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: "select_account" });
+
 //login account
 async function signIn() {
   try {
     // await signInWithEmailAndPassword(auth, email, password);
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithRedirect(auth, provider);
     const userinfo = getAdditionalUserInfo(result);
     if (userinfo.isNewUser) await newUserDB(result.user);
   } catch (e) {
