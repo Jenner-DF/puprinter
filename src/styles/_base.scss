@@ -28,13 +28,12 @@ body {
   background-size: cover;
   background-repeat: no-repeat;
   overflow-x: hidden;
-  // position: relative;
 }
-
+main {
+  min-height: calc(100vh - 18rem);
+}
 .container {
   max-width: 144rem;
-  height: 80%;
-  // border: 5px solid rebeccapurple;
   margin: 0 auto;
 }
 .header {
@@ -45,4 +44,5 @@ body {
   color: red;
   font-size: 1.6rem;
   text-align: center;
+  padding: 1rem;
 }

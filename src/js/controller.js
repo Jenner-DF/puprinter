@@ -297,6 +297,7 @@ const spinner = ` <div class="spinner">
   <use href="${icons}#icon-loader"></use>
 </svg>
 </div>`;
+loginPanel.render();
 onAuthStateChanged(auth, async (user) => {
   await handleRedirectAuth();
   document.body.insertAdjacentHTML("afterbegin", "");

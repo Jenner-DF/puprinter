@@ -28,11 +28,7 @@ const provider = new GoogleAuthProvider();
 async function signIn() {
   try {
     // await signInWithEmailAndPassword(auth, email, password);
-    const result = await signInWithRedirect(auth, provider);
-    console.log("this is my res!!!");
-    console.log(userResult);
-    console.log(getAdditionalUserInfo(userResult));
-    // const userinfo = getAdditionalUserInfo(result);
+    await signInWithRedirect(auth, provider);
   } catch (e) {
     throw e.message;
   }
@@ -99,9 +95,14 @@ async function isAdmin() {
 }
 //get firebase user profile of currently logged in
 async function getUserProfile(uid) {
-  const docRef = doc(db, "users", uid);
-  const getdoc = await getDoc(docRef);
-  return getdoc.data();
+  try {
+    if (!uid) return null;
+    const docRef = doc(db, "users", uid);
+    const getdoc = await getDoc(docRef);
+    return getdoc.data();
+  } catch (e) {
+    throw e;
+  }
 }
 async function getUserDocs(uid) {
   const q = query(

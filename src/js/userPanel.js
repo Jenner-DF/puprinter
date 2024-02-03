@@ -7,10 +7,10 @@ import {
 } from "firebase/firestore";
 import logo from "../img/Pay-U-Print-logo.png";
 import icons from "../img/icons.svg";
-import classPanel from "./classPanel";
+import Panel from "./Panel";
 //prettier-ignore
 import { auth, db, getUserDocs, getUserProfile, userSignOut } from "./firebaseConfig";
-class userPanel extends classPanel {
+class userPanel extends Panel {
   _header = `<header class="header panel_user">
   <img
     class="header__login_logo"
@@ -92,6 +92,68 @@ class userPanel extends classPanel {
       }
     });
   }
+  generateUserHistoryMarkup(data) {
+    //NOTE: merge history of admin and user, set flags to get which data is displayed
+    const trows = data
+      .map(
+        (data) =>
+          `<tr>
+          <td class="text-overflow">${data.filename}</td>
+          <td class="center-text">${data.filepincode}</td>
+          <td class="center-text capitalize">${data.paperType}</td>
+          <td class="center-text capitalize">${data.colorOption}</td>
+          <td class="center-text">${this.formatTimeStamp(data.timestamp)}</td>
+          <td class="center-text">${data.status}</td>
+          </tr>`
+      )
+      .join("");
+    return `<div class="container table-container">
+    <table id="data-table">
+      <thead>
+        <tr>
+        <th>Filename</th>
+        <th class="center-text">File Pincode</th>
+        <th class="center-text">Paper Type</th>
+        <th class="center-text">Color Option</th>
+        <th class="center-text">Date Uploaded</th>
+        <th class="center-text">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${trows}
+      </tbody>
+    </table>
+  </div>
+  <!--<div id="pagination">
+    <button id="prevPage">Previous</button>
+    <span id="currentPage">1</span>
+    <button id="nextPage">Next</button>
+  </div> -->`;
+  }
+
+  async renderHistory(userProfile) {
+    this._pastDocs = JSON.parse(userProfile.history);
+
+    // NOTE: it works because it is still under new userPanel()
+    const allDocs = [...this._activeDocs, ...this._pastDocs];
+    console.log(allDocs);
+    document.body.children[1].innerHTML =
+      this.generateUserHistoryMarkup(allDocs); //NOTE: VIEW ONLY
+  }
+  generateWalletMarkup() {
+    return `
+    <div class="container print__section">
+    <div class='loader'></div>
+    <div class="section print__section_wallet">
+      <div class="printForm__text">Hello, ${user.displayName}!</div>
+      <div class="wallet">
+        <p class="wallet__text">Available Balance:</p>
+        <div class="wallet__balance">₱${user.wallet.toFixed(2)}</div>
+      </div>
+    </div>
+    `;
+  }
+  renderWallet() {}
 }
 export default userPanel;
 //BUG: for next update idea

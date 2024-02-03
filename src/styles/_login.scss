@@ -1,8 +1,4 @@
-.signUp,
 .signIn {
-  display: none;
-}
-.showform {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -41,17 +37,17 @@
   }
   &__btns {
     display: flex;
+    flex-direction: column;
     gap: 2rem;
-    width: 100%;
+    width: 20%;
   }
 }
 .btn-main {
   background-color: $color-primary;
 }
 .disclaimer {
-  position: absolute;
-  bottom: 0;
-  align-self: flex-end;
+  background-color: #fff;
+  margin-top: 2rem;
   &__text {
     line-height: 1.4;
   }

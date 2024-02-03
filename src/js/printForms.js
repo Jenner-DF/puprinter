@@ -6,21 +6,22 @@ import { updateDoc } from "firebase/firestore";
 //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
 
 export default class PrintForm {
-  constructor(file, colorOption, paperType) {
-    this.userID = auth.currentUser.uid;
-    this.colorOption = colorOption;
+  constructor(file, colorOption, paperType, paymentOption) {
+    this.userID = auth?.currentUser?.uid ? auth.currentUser.uid : null;
     this.file = file;
+    this.colorOption = colorOption;
     this.paperType = paperType;
+    this.paymentOption = paymentOption;
     console.log(this.userID, this.colorOption, this.file, this.paperType);
   }
-  static async createInstance(file, colorOption, paperType) {
-    const instance = new PrintForm(file, colorOption, paperType);
+  static async createInstance(file, colorOption, paperType, paymentOption) {
+    const instance = new PrintForm(file, colorOption, paperType, paymentOption);
     await instance._exportPrintFormToDB();
     return instance.pincode;
   }
   async _exportPrintFormToDB() {
     try {
-      this._userData = await getUserProfile(auth.currentUser.uid);
+      this._userData = await getUserProfile(this.userID);
       (this.pincode = await this._generateFilePinCode()),
         (this.fileurl = await this._generateFileUrl());
       this.price = await PrintForm._generatePriceAmount(
@@ -30,17 +31,19 @@ export default class PrintForm {
       );
       await runTransaction(db, async (transaction) => {
         transaction.set(this._docRef, {
-          userID: auth.currentUser.uid,
+          userID: this.userID,
           filename: this.file.name,
           fileURL: this.fileurl,
           paperType: this.paperType,
           price: this.price,
           colorOption: this.colorOption,
-          status: "Ready for Printing",
+          paymentOption: this.paymentOption,
+          status:
+            this.paymentOption === "machine" ? "Unpaid" : "Ready for Printing",
           timestamp: serverTimestamp(),
         });
       });
-      await this.updateUserWallet();
+      this.paymentOption === "machine" ? null : await this.updateUserWallet();
 
       // await addDoc(this._docRef, {
       //   userID: auth.currentUser.uid,
@@ -112,7 +115,7 @@ export default class PrintForm {
     let existingPdfBytes;
     if (!local) {
       //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
-      url = `https://justcors.com/tl_9bff6ec/${file}`;
+      url = `https://justcors.com/tl_c31d197/${file}`;
       existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
     } else {
       existingPdfBytes = await file.arrayBuffer();
