@@ -83,11 +83,11 @@ export default class Panel {
 
     fileInput.addEventListener("change", function () {
       //need to be function() to get this
+      console.log(this.files);
       const selectedFile = this.files[0];
-      if (selectedFile.type !== "application/pdf")
-        return alert("Please upload PDF file only.");
-
-      document.querySelector(".file_label").textContent = selectedFile.name;
+      document.querySelector(".file_label").textContent = selectedFile?.name
+        ? selectedFile.name
+        : "Upload a PDF file";
       console.log(selectedFile);
     });
     // open modal after clicking submit
@@ -255,8 +255,8 @@ export default class Panel {
     this.modal.insertAdjacentHTML("afterbegin", priceDialogMarkup);
     //generate buttons inside the dialog
     const btnSubmit = document.querySelector(".btnSubmit");
-    const closeModal = document.querySelector(".closeModal");
-    this.modalcloselistener(closeModal);
+    this.modalcloselistener(document.querySelector(".closeModal"));
+
     // if wallet
     btnSubmit.addEventListener("click", async () => {
       this._clear(this.modal);
@@ -294,6 +294,7 @@ export default class Panel {
       </div>`;
       this._clear(this.modal);
       this.modal.insertAdjacentHTML("afterbegin", pincodeMarkup);
+      this.modalcloselistener(document.querySelector(".closeModal"));
       //AFTER SUBMITTING PRINT FORM
       this.printForm.reset();
       this.fileLabel.textContent = "Upload a PDF file";
