@@ -15,7 +15,7 @@ class loginPanel extends Panel {
     <div class="form__textheader">Sign in your account</div>
     <div class="form__textheader_error error_signIn"></div>
     <div class=form__btns>
-      <button class="btn form__btn_login btn__main login" disabled>
+      <button class="btn form__btn_login btn__main login">
         <h3>Login with Google</h3>
       </button>
       <div class="center-text">OR </div>

@@ -58,7 +58,7 @@ export default class PrintForm {
       //   timestamp: serverTimestamp(),
       // });
     } catch (e) {
-      alert(e);
+      throw e;
     }
   }
   async updateUserWallet() {
@@ -115,7 +115,7 @@ export default class PrintForm {
     let existingPdfBytes;
     if (!local) {
       //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
-      url = `https://justcors.com/tl_c31d197/${file}`;
+      url = `https://justcors.com/tl_2b3bfb2/${file}`;
       existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
     } else {
       existingPdfBytes = await file.arrayBuffer();

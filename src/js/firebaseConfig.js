@@ -61,13 +61,7 @@ async function handleRedirectAuth() {
 //   }
 // }
 // sign out account
-async function userSignOut() {
-  try {
-    await signOut(auth);
-  } catch (e) {
-    throw e;
-  }
-}
+
 //adds and checks to users db for duplicate
 async function newUserDB(user) {
   try {
@@ -134,7 +128,9 @@ export {
   signIn,
   signup,
   isAdmin,
-  userSignOut,
   runTransaction,
   handleRedirectAuth,
+  signOut,
+  onSnapshot,
+  where,
 };

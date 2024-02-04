@@ -1,14 +1,11 @@
-import { doc, onSnapshot } from "firebase/firestore";
 import icons from "../img/icons.svg";
 import printerloading from "../img/printerloading.gif";
 import PrintForm from "./printForms";
-import { auth, db, getUserProfile } from "./firebaseConfig";
 
 export default class Panel {
   _parentEl;
-  generatePrintFormMarkup(user) {
+  generatePrintFormMarkup() {
     // console.log(user); NOTE: make an object and set it to ${} so without signing in is ok! or divide wallet section
-    console.log(user);
     return `
     <div class="section print__section_printForm">
       <!-- PRINTFORM -->
@@ -56,7 +53,9 @@ export default class Panel {
           <label for="select-payment">Payment Option</label>
           <select id="select-payment" name="select_payment" required>
             <option value="">Choose one option:</option>
-            <option value="wallet"  ${user ? "" : "disabled"}>E-wallet</option>
+            <option value="wallet"  ${
+              this.uid ? "" : "disabled"
+            }>E-wallet</option>
             <option value="machine">At the Machine</option>
           </select>
         </div>
@@ -68,8 +67,8 @@ export default class Panel {
     </div>`;
   }
 
-  async renderPrintForm(userProfile = null) {
-    const printFormMarkup = this.generatePrintFormMarkup(userProfile);
+  renderPrintForm() {
+    const printFormMarkup = this.generatePrintFormMarkup();
     this._parentEl.insertAdjacentHTML("beforeend", printFormMarkup);
     this.addPrintFormListener();
   }
@@ -103,128 +102,13 @@ export default class Panel {
           this.printForm.select_payment.value === ""
         )
           throw new Error("Please ensure all form fields are completed");
+        this.errorEl.innerHTML = "";
         this.paymentOption = this.printForm.select_payment.value;
         await this.renderPrintFormDialog();
-
-        //NOTE: ADD HERE REMOVE BOTTOM
-        //show Price Dialog
-        // this.renderSpinner(modImg);
-        // this.priceFile = await PrintForm._generatePriceAmount(
-        //   printForm.file.files[0],
-        //   printForm.select_paper.value,
-        //   printForm.select_colored.value,
-        //   true
-        // );
-        // this._clear(modImg);
-        // this.renderSpinner(modImg);
-        // const wallet = await getUserProfile(auth.currentUser.uid);
-        // console.log(wallet.wallet);
-        // showPriceDialog(this.priceFile, wallet.wallet);
       } catch (e) {
         this.renderError(this.errorEl, e);
       }
     });
-    // function showPriceDialog(price, wallet) {
-    //   const priceFile = price;
-    //   const walletBal = wallet;
-    //   modText.innerHTML = "";
-    //   modImg.innerHTML = "";
-    //   modBtns.innerHTML = "";
-    //   modText.insertAdjacentHTML("afterbegin", `<p>Amount to Pay:</p>`);
-    //   modImg.insertAdjacentHTML(
-    //     "afterbegin",
-    //     `  <p class="modal__img_text">₱${price}</p>`
-    //   );
-    //   modBtns.insertAdjacentHTML(
-    //     "afterbegin",
-    //     `<button class="btn btn__main btnSubmit">Print</button>
-    //   <button class="btn closeModal">Cancel</button>`
-    //   );
-    //   // generate buttons inside the dialog
-    //   const btnSubmit = document.querySelector(".btnSubmit");
-    //   const closeModal = document.querySelector(".closeModal");
-    //   closeModal.addEventListener("click", () => {
-    //     modal.close();
-    //   });
-    //   //checks Wallet if enough balance for File
-    //   const isWalletEnoughBal = () => (walletBal >= priceFile ? true : false);
-    //   //listen for clicking print button inside dialog
-    //   btnSubmit.addEventListener("click", async () => {
-    //     modText.innerHTML = "";
-    //     modImg.innerHTML = "";
-    //     modBtns.innerHTML = "";
-    //     if (!isWalletEnoughBal()) {
-    //       modText.insertAdjacentHTML(
-    //         "afterbegin",
-    //         `<p>Insufficient Balance!</p>`
-    //       );
-    //       modImg.insertAdjacentHTML(
-    //         "afterbegin",
-    //         `<p>Please load at the nearest provider.</p>`
-    //       );
-    //       modBtns.insertAdjacentHTML(
-    //         "afterbegin",
-    //         `<button class="btn closeModal">Close</button>`
-    //       );
-    //       // NOTE: DUPLICATE CODE FOR LISTENER
-    //       const closeModal = document.querySelector(".closeModal");
-    //       closeModal.addEventListener("click", () => modal.close());
-    //     } else {
-    //       modText.insertAdjacentHTML(
-    //         "afterbegin",
-    //         `<p>Generating file pin code...</p>`
-    //       );
-    //       modImg.insertAdjacentHTML(
-    //         "afterbegin",
-    //         `<img src="${printerloading}" alt="Printing Image" />`
-    //       );
-    //       //get file pincode, returns pincode of file
-    //       //NOTE: USE TRY CATCH FOR ERROR
-    //       const getPincodeForm = await PrintForm.createInstance(
-    //         printForm.file.files[0],
-    //         printForm.select_colored.value,
-    //         printForm.select_paper.value
-    //       );
-    //       modText.innerHTML = "";
-    //       modImg.innerHTML = "";
-    //       modBtns.innerHTML = "";
-    //       modText.insertAdjacentHTML(
-    //         "afterbegin",
-    //         `<p>
-    //         Please proceed to the machine and enter this code to get your
-    //         document:
-    //       </p>`
-    //       );
-    //       modImg.insertAdjacentHTML(
-    //         "afterbegin",
-    //         generatePinCodeMarkup(getPincodeForm)
-    //       );
-    //       modBtns.insertAdjacentHTML(
-    //         "afterbegin",
-    //         `<button class="btn closeModal">Close</button>`
-    //       );
-    //       // NOTE: DUPLICATE CODE FOR LISTENER
-    //       const closeModal = document.querySelector(".closeModal");
-    //       closeModal.addEventListener("click", () => modal.close());
-
-    //       //AFTER SUBMITTING PRINT FORM
-    //       printForm.reset();
-    //       fileLabel.textContent = "Upload a PDF file";
-    //       mywalletBal.textContent = `₱${(walletBal - priceFile).toFixed(2)}`;
-    //       document.querySelector(".loader").innerHTML = "";
-
-    //       //returns markup of pincode
-    //       function generatePinCodeMarkup(pincode) {
-    //         console.log(pincode);
-    //         console.log(typeof pincode);
-    //         return pincode
-    //           .split("")
-    //           .map((digit) => `<p class="code">${digit}</p>`)
-    //           .join("");
-    //       }
-    //     }
-    //   });
-    // }
   }
   async renderPrintFormDialog() {
     const modImg = document.querySelector(".modal__img");
@@ -254,62 +138,87 @@ export default class Panel {
     this._clear(this.modal);
     this.modal.insertAdjacentHTML("afterbegin", priceDialogMarkup);
     //generate buttons inside the dialog
-    const btnSubmit = document.querySelector(".btnSubmit");
+    this.modalsubmitlistener(document.querySelector(".btnSubmit"), () =>
+      this.showPrintFormPaymentDialog(this.paymentOption, price)
+    );
     this.modalcloselistener(document.querySelector(".closeModal"));
-
-    // if wallet
-    btnSubmit.addEventListener("click", async () => {
-      this._clear(this.modal);
-      await this.showPrintFormSubmitDialog(this.paymentOption);
-    });
   }
-  //NOTE: override this function for useradmin with wallet
-  async showPrintFormSubmitDialog(paymentOption) {
+  //NOTE: since e-wallet is disabled, no override needed, add only a flag
+  showPrintFormPaymentDialog(paymentOption, price) {
     try {
-      const gettingPincodeMarkup = `
-      <div class="modal__section modal__text">
-        <p>Generating file pin code...</p>
-      </div>
-      <div class="modal__section modal__img">
-        <img src="${printerloading}" alt="Printing Image" />
-      </div>`;
-      this._clear(this.modal);
-      this.modal.insertAdjacentHTML("afterbegin", gettingPincodeMarkup);
-      const getPincodeForm = await PrintForm.createInstance(
-        this.printForm.file.files[0],
-        this.printForm.select_colored.value,
-        this.printForm.select_paper.value,
-        this.printForm.select_payment.value
-      );
-      this._clear(this.modal);
-      const pincodeMarkup = `
-      <div class="modal__section modal__text">
-        <p>Please proceed to the machine and enter this to get your document:</p>
-      </div>
-      <div class="modal__section modal__img">
-        <p class="modal__img_text">${generatePinCodeMarkup(getPincodeForm)}</p>
-      </div>
-      <div class="modal__section modal__btns">
-        <button class="btn closeModal">Close</button>
-      </div>`;
-      this._clear(this.modal);
-      this.modal.insertAdjacentHTML("afterbegin", pincodeMarkup);
-      this.modalcloselistener(document.querySelector(".closeModal"));
-      //AFTER SUBMITTING PRINT FORM
-      this.printForm.reset();
-      this.fileLabel.textContent = "Upload a PDF file";
-      document.querySelector(".errormsg").innerHTML = "";
-      //returns markup of pincode
-      function generatePinCodeMarkup(pincode) {
-        console.log(pincode);
-        return pincode
-          .split("")
-          .map((digit) => `<p class="code">${digit}</p>`)
-          .join("");
+      if (paymentOption === "wallet") {
+        const walletMarkup = `
+        <div class="modal__section modal__text">
+          <p>E-Wallet Payment Confirmation:</p>
+        </div>
+        <div class="modal__section modal__img">
+          <p class="modal__img_text_wallet">An amount of ₱${price} will be deducted from your account. Proceed?</p>
+        </div>
+        <div class="modal__section modal__btns">
+          <button class="btn btn__main btnSubmit">Confirm</button>
+          <button class="btn closeModal">Cancel</button>
+        </div>`;
+        this._clear(this.modal);
+        this.modal.insertAdjacentHTML("afterbegin", walletMarkup);
+        this.modalsubmitlistener(document.querySelector(".btnSubmit"), () =>
+          this.generatePinCodeMarkup()
+        );
+        this.modalcloselistener(document.querySelector(".closeModal"));
+      } else {
+        this.generatePinCodeMarkup();
       }
     } catch (e) {
       throw e;
     }
+  }
+  async generatePinCodeMarkup() {
+    const gettingPincodeMarkup = `
+    <div class="modal__section modal__text">
+      <p>Generating file pin code...</p>
+    </div>
+    <div class="modal__section modal__img">
+      <img src="${printerloading}" alt="Printing Image" />
+    </div>`;
+    this._clear(this.modal);
+    this.modal.insertAdjacentHTML("afterbegin", gettingPincodeMarkup);
+    const getPincodeForm = await PrintForm.createInstance(
+      this.printForm.file.files[0],
+      this.printForm.select_colored.value,
+      this.printForm.select_paper.value,
+      this.printForm.select_payment.value
+    );
+    this._clear(this.modal);
+    const pincodeMarkup = `
+    <div class="modal__section modal__text">
+      <p>Please proceed to the machine and enter this to get your document:</p>
+    </div>
+    <div class="modal__section modal__img">
+      <p class="modal__img_text">${formatPincode(getPincodeForm)}</p>
+    </div>
+    <div class="modal__section modal__btns">
+      <button class="btn closeModal">Close</button>
+    </div>`;
+    this._clear(this.modal);
+    this.modal.insertAdjacentHTML("afterbegin", pincodeMarkup);
+    this.modalcloselistener(document.querySelector(".closeModal"));
+
+    //AFTER SUBMITTING PRINT FORM
+    this.printForm.reset();
+    this.fileLabel.textContent = "Upload a PDF file";
+    //returns markup of pincode
+    function formatPincode(pincode) {
+      console.log(pincode);
+      return pincode
+        .split("")
+        .map((digit) => `<p class="code">${digit}</p>`)
+        .join("");
+    }
+  }
+  modalsubmitlistener(btnSubmit, handler) {
+    btnSubmit.addEventListener("click", async () => {
+      this._clear(this.modal);
+      handler();
+    });
   }
   modalcloselistener(closeModal) {
     closeModal.addEventListener("click", () => {

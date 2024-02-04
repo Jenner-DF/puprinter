@@ -1,16 +1,9 @@
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
 import logo from "../img/Pay-U-Print-logo.png";
-import icons from "../img/icons.svg";
 import Panel from "./Panel";
 //prettier-ignore
-import { auth, db, getUserDocs, getUserProfile, userSignOut } from "./firebaseConfig";
+import { auth, db, getUserProfile, signOut, collection, onSnapshot, orderBy, query, where, } from "./firebaseConfig";
 class userPanel extends Panel {
+  _userProfile;
   _header = `<header class="header panel_user">
   <img
     class="header__login_logo"
@@ -24,25 +17,46 @@ class userPanel extends Panel {
       <li><button class="nav__btn logout">Logout</button></li>
     </ul>
   </nav>
-</header><main></main>`;
+</header><main class="main"></main>`;
   constructor(uid, isAdmin) {
     super();
     if (!isAdmin) this.renderHeader();
-    this.initUserData(uid);
+    this.uid = uid;
+    this.initUserData();
   }
-  async initUserData(uid) {
+  async initUserData() {
     try {
       //NOTE: if i put this._userProfile = await getUserProfile(auth.currentUser.uid); here, it will not get the updated data(wallet,history)
-      this.getLiveActiveDocs(uid);
-      await this.render();
+      this._userProfile = await getUserProfile(this.uid);
+      this.getLiveUserProfile();
+      this.getLiveActiveDocs();
+      this.render();
     } catch (e) {
       alert(e);
     }
   }
-  getLiveActiveDocs(uid) {
+  getLiveUserProfile() {
+    const q = query(collection(db, "users"), where("uid", "==", this.uid));
+    onSnapshot(q, (querySnapshot) => {
+      querySnapshot.forEach((doc) => {
+        this._userProfile = {
+          AccountCreationDate: doc.data().AccountCreationDate,
+          displayName: doc.data().displayName,
+          email: doc.data().email,
+          history: doc.data().history,
+          isAdmin: doc.data().isAdmin,
+          uid: doc.data().uid,
+          wallet: doc.data().wallet,
+        };
+      });
+      this.walletBalance.innerHTML = `₱${this._userProfile.wallet.toFixed(2)}`;
+      this._pastDocs = JSON.parse(this._userProfile.history);
+    });
+  }
+  getLiveActiveDocs() {
     const q = query(
       collection(db, "printForms"),
-      where("userID", "==", uid),
+      where("userID", "==", this.uid),
       orderBy("timestamp", "desc")
     );
     onSnapshot(q, (querySnapshot) => {
@@ -50,7 +64,8 @@ class userPanel extends Panel {
       querySnapshot.forEach((doc) => {
         docs.push({
           filename: doc.data().filename,
-          filepincode: doc.data().filePinCode,
+          filepincode: doc.id,
+          price: doc.data().price,
           paperType: doc.data().paperType,
           colorOption: doc.data().colorOption,
           timestamp: doc.data().timestamp,
@@ -58,52 +73,37 @@ class userPanel extends Panel {
         });
       });
       this._activeDocs = docs; // update active docs array
-      // console.log(this._activeDocs);
     });
   }
-  async render() {
-    console.log(auth.currentUser.uid);
-    this._userProfile = await getUserProfile(auth.currentUser.uid);
-    this.renderPrintForm(this._userProfile);
+  generateWalletMarkup() {
+    return `
+    <div class="container print__section">
+    <div class="section print__section_wallet">
+      <div class="printForm__text">Hello, ${
+        this._userProfile.displayName
+      }!</div>
+      <div class="wallet">
+        <p class="wallet__text">Available Balance:</p>
+        <div class="wallet__balance">₱${this._userProfile.wallet.toFixed(
+          2
+        )}</div>
+      </div>
+    </div>
+    `;
   }
-  renderHeader() {
-    document.body.innerHTML = this._header;
-    this.addHeaderListeners();
-  }
-  addHeaderListeners() {
-    const upload = document.querySelector(".upload");
-    const history = document.querySelector(".history");
-    const logout = document.querySelector(".logout");
-    upload.addEventListener("click", async () => {
-      this.renderSpinner(document.body.children[1]);
-      this._userProfile = await getUserProfile(auth.currentUser.uid);
-      this.renderPrintForm(this._userProfile);
-    });
-    history.addEventListener("click", async () => {
-      this.renderSpinner(document.body.children[1]);
-      this._userProfile = await getUserProfile(auth.currentUser.uid);
-      await this.renderHistory(this._userProfile);
-    });
-    logout.addEventListener("click", async () => {
-      try {
-        userSignOut();
-      } catch (e) {
-        alert(e);
-      }
-    });
-  }
-  generateUserHistoryMarkup(data) {
-    //NOTE: merge history of admin and user, set flags to get which data is displayed
-    const trows = data
+  generateUserHistoryMarkup(allDocs) {
+    //NOTE: merge history of admin and user, set flags to get which docdata is displayed
+    const trows = allDocs
       .map(
-        (data) =>
+        (doc) =>
           `<tr>
-          <td class="text-overflow">${data.filename}</td>
-          <td class="center-text">${data.filepincode}</td>
-          <td class="center-text capitalize">${data.paperType}</td>
-          <td class="center-text capitalize">${data.colorOption}</td>
-          <td class="center-text">${this.formatTimeStamp(data.timestamp)}</td>
-          <td class="center-text">${data.status}</td>
+          <td class="text-overflow">${doc.filename}</td>
+          <td class="center-text">${doc.filepincode}</td>
+          <td class="center-text capitalize">₱${doc.price.toFixed(2)}</td>
+          <td class="center-text capitalize">${doc.paperType}</td>
+          <td class="center-text capitalize">${doc.colorOption}</td>
+          <td class="center-text">${this.formatTimeStamp(doc.timestamp)}</td>
+          <td class="center-text">${doc.status}</td>
           </tr>`
       )
       .join("");
@@ -113,6 +113,7 @@ class userPanel extends Panel {
         <tr>
         <th>Filename</th>
         <th class="center-text">File Pincode</th>
+        <th class="center-text">Price</th>
         <th class="center-text">Paper Type</th>
         <th class="center-text">Color Option</th>
         <th class="center-text">Date Uploaded</th>
@@ -130,30 +131,53 @@ class userPanel extends Panel {
     <button id="nextPage">Next</button>
   </div> -->`;
   }
-
-  async renderHistory(userProfile) {
-    this._pastDocs = JSON.parse(userProfile.history);
-
+  renderWallet() {
+    this._parentEl.insertAdjacentHTML(
+      "afterbegin",
+      this.generateWalletMarkup()
+    );
+    this.walletBalance = document.querySelector(".wallet__balance");
+  }
+  renderHistory() {
+    this._pastDocs = JSON.parse(this._userProfile.history);
     // NOTE: it works because it is still under new userPanel()
     const allDocs = [...this._activeDocs, ...this._pastDocs];
-    console.log(allDocs);
-    document.body.children[1].innerHTML =
-      this.generateUserHistoryMarkup(allDocs); //NOTE: VIEW ONLY
+    this._clear(this._parentEl);
+    this._parentEl.insertAdjacentHTML(
+      "beforeend",
+      this.generateUserHistoryMarkup(allDocs)
+    );
   }
-  generateWalletMarkup() {
-    return `
-    <div class="container print__section">
-    <div class='loader'></div>
-    <div class="section print__section_wallet">
-      <div class="printForm__text">Hello, ${user.displayName}!</div>
-      <div class="wallet">
-        <p class="wallet__text">Available Balance:</p>
-        <div class="wallet__balance">₱${user.wallet.toFixed(2)}</div>
-      </div>
-    </div>
-    `;
+  render() {
+    this.renderWallet();
+    this.renderPrintForm();
   }
-  renderWallet() {}
+  renderHeader() {
+    document.body.innerHTML = this._header;
+    this._parentEl = document.querySelector(".main");
+    this.addHeaderListeners();
+  }
+  addHeaderListeners() {
+    const upload = document.querySelector(".upload");
+    const history = document.querySelector(".history");
+    const logout = document.querySelector(".logout");
+    upload.addEventListener("click", () => {
+      this._clear(this._parentEl);
+      this.renderWallet();
+      this.renderPrintForm();
+    });
+    history.addEventListener("click", () => {
+      this.renderSpinner(document.body.children[1]);
+      this.renderHistory();
+    });
+    logout.addEventListener("click", async () => {
+      try {
+        signOut(auth);
+      } catch (e) {
+        alert(e);
+      }
+    });
+  }
 }
 export default userPanel;
 //BUG: for next update idea

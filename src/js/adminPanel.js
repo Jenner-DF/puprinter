@@ -1,23 +1,6 @@
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  doc,
-} from "firebase/firestore";
-import {
-  auth,
-  db,
-  getUserDocs,
-  getUserProfile,
-  userSignOut,
-} from "./firebaseConfig";
-
+//prettier-ignore
+import { auth, db, getUserProfile, signOut, collection, onSnapshot, orderBy, query, where, } from "./firebaseConfig"
 import logo from "../img/Pay-U-Print-Admin-logo.png";
-import { getUserProfile } from "./firebaseConfig.js";
 import userPanel from "./userPanel";
 class adminPanel extends userPanel {
   _header = `<header class="header panel_user">
@@ -35,7 +18,7 @@ class adminPanel extends userPanel {
       <li><button class="nav__btn logout">Logout</button></li>
     </ul>
   </nav>
-</header><main></main>`;
+</header><main class="main"></main>`;
   constructor(uid, isAdmin) {
     super(uid, isAdmin);
 
@@ -47,40 +30,20 @@ class adminPanel extends userPanel {
   }
   renderHeader() {
     document.body.innerHTML = this._header;
-    this.addHeaderListeners();
+    this._parentEl = document.querySelector(".main");
+    this.addAdminHeaderListeners();
   }
-  addHeaderListeners() {
-    const upload = document.querySelector(".upload");
+  addAdminHeaderListeners() {
+    super.addHeaderListeners();
     const analytics = document.querySelector(".analytics");
     const database = document.querySelector(".database");
-    const history = document.querySelector(".history");
-    const logout = document.querySelector(".logout");
 
-    upload.addEventListener("click", async () => {
-      this.renderSpinner(document.body.children[1]);
-      this._userProfile = await getUserProfile(auth.currentUser.uid);
-      console.log("logging userprof");
-      console.log(this._userProfile);
-      this.renderPrintForm(this._userProfile);
-    });
     analytics.addEventListener("click", () => {
       console.log(`hello wasdorld!`);
     });
     database.addEventListener("click", async () => {
       this.renderSpinner(document.body.children[1]);
       await this.renderDB();
-    });
-    history.addEventListener("click", async () => {
-      this.renderSpinner(document.body.children[1]);
-      this._userProfile = await getUserProfile(auth.currentUser.uid);
-      await this.renderHistory(this._userProfile);
-    });
-    logout.addEventListener("click", async () => {
-      try {
-        userSignOut();
-      } catch (e) {
-        alert(e);
-      }
     });
   }
   generateDBMarkup(data) {
