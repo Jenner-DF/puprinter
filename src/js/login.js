@@ -19,7 +19,8 @@ class loginPanel extends Panel {
         <h3>Login with Google</h3>
       </button>
       <div class="center-text">OR </div>
-      <button class="btn form__btn_swapform printnow">Print Now!</button>
+      <button class="btn form__btn_swapform printnow">Print Now XD!</button>
+      <button class="bombastic">Print Now XD!</button>
     </div>
   </div>
   </main>
@@ -37,6 +38,15 @@ class loginPanel extends Panel {
     this._clear(document.body);
     this.renderLogin();
     this._parentEl = document.querySelector(".main");
+    this.bombastic = document.querySelector(".bombastic");
+    this.bombastic.addEventListener("click", async (e) => {
+      const response = await fetch("./.netlify/functions/hello-world").then(
+        (response) => response.json()
+      );
+      this.bombastic.textContent = response;
+      console.log(e);
+      console.log("bombastic side eye!");
+    });
   }
   renderLogin() {
     document.body.insertAdjacentHTML("afterbegin", this._loginMarkup);
