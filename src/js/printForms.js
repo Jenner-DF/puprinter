@@ -1,34 +1,53 @@
 import { PDFDocument } from "pdf-lib";
 //prettier-ignore
-import { storage,addDoc,doc,getDoc,getDocs,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes, getUserProfile,runTransaction } from "./firebaseConfig";
+import { storage,addDoc,doc,getDoc,getDocs,serverTimestamp, ref,collection, db, auth, getDownloadURL,uploadBytes, getUserProfile,runTransaction, getPrinterConfig} from "./firebaseConfig";
 import { updateDoc } from "firebase/firestore";
+
+//BAGTZtEwg7TQdKcwIs44 - printconfig uid
 //NOTE: JUSTCORS IS IN URL WHEN DEPLOYING LIVE!
 //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
 
 export default class PrintForm {
-  constructor(file, colorOption, paperType, paymentOption) {
+  constructor(file, colorOption, paperType, paymentOption, price) {
+    // this.printerUID = "printer1";
     this.userID = auth?.currentUser?.uid ? auth.currentUser.uid : null;
     this.file = file;
     this.colorOption = colorOption;
     this.paperType = paperType;
     this.paymentOption = paymentOption;
-    console.log(this.userID, this.colorOption, this.file, this.paperType);
+    this.price = price;
+    console.log(
+      this.userID,
+      this.colorOption,
+      this.file,
+      this.paperType,
+      this.price
+    );
   }
-  static async createInstance(file, colorOption, paperType, paymentOption) {
-    const instance = new PrintForm(file, colorOption, paperType, paymentOption);
+  static async createInstance(
+    file,
+    colorOption,
+    paperType,
+    paymentOption,
+    price
+  ) {
+    const instance = new PrintForm(
+      file,
+      colorOption,
+      paperType,
+      paymentOption,
+      price
+    );
     await instance._exportPrintFormToDB();
     return instance.pincode;
   }
+
   async _exportPrintFormToDB() {
     try {
       this._userData = await getUserProfile(this.userID);
-      (this.pincode = await this._generateFilePinCode()),
-        (this.fileurl = await this._generateFileUrl());
-      this.price = await PrintForm._generatePriceAmount(
-        this.fileurl,
-        this.paperType,
-        this.colorOption
-      );
+      //prettier-ignore
+      this.pincode = await this._generateFilePinCode(),
+      this.fileurl = await this._generateFileUrl();
       await runTransaction(db, async (transaction) => {
         transaction.set(this._docRef, {
           userID: this.userID,
@@ -105,25 +124,27 @@ export default class PrintForm {
       throw new Error("Failed to assign a unique PIN after several attempts.");
     }
   }
-  static async _generatePriceAmount(file, paper, color, local = false) {
-    // short = ₱2 || long = ₱3 &&
-    // colorOption = +₱3 || grayscale = +₱0
-    const paperType = paper === "short" ? 2 : 3;
-    const colorOption = color === "colored" ? 3 : 0;
-    this.pricemultiplier = paperType + colorOption;
-    let url;
-    let existingPdfBytes;
-    if (!local) {
-      //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
-      url = `https://justcors.com/tl_20c7f58/${file}`;
-      existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
-    } else {
-      existingPdfBytes = await file.arrayBuffer();
-    }
-    //get PDF data
-    const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    const totalpage = pdfDoc.getPageCount();
-    //get pdf price
-    return totalpage * this.pricemultiplier;
-  }
+  // static async _generatePriceAmount(file, paper, color) {
+  //   const printer = await this.initPrintConfig("printer1");
+  //   // short = ₱2 || long = ₱3 &&
+  //   // colorOption = +₱3 || grayscale = +₱0
+  //   const paperType = paper === "short" ? 2 : 3;
+  //   const colorOption = color === "colored" ? 3 : 0;
+  //   this.pricemultiplier = paperType + colorOption;
+  //   let url;
+  //   let existingPdfBytes;
+  //   // if (!local) {
+  //   //   //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
+  //   //   url = `https://justcors.com/tl_20c7f58/${file}`;
+  //   //   existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
+  //   // } else {
+  //   //   existingPdfBytes = await file.arrayBuffer();
+  //   // }
+  //   existingPdfBytes = await file.arrayBuffer();
+  //   //get PDF data
+  //   const pdfDoc = await PDFDocument.load(existingPdfBytes);
+  //   const totalpage = pdfDoc.getPageCount();
+  //   //get pdf price
+  //   return totalpage * this.pricemultiplier;
+  // }
 }

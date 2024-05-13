@@ -106,7 +106,33 @@ async function getUserDocs(uid) {
   );
   return await getDocs(q);
 }
-
+async function getPrinterConfig(uid) {
+  try {
+    // await setDoc(
+    //   doc(db, "PrintConfig", "printer1"),
+    //   {
+    //     priceShort: 2,
+    //     stockShort: 250,
+    //     printableColored: 6000,
+    //     stockLong: 250,
+    //     priceA4: 6,
+    //     colorPercentageLow: 5,
+    //     priceLong: 4,
+    //     uploadLimitBytes: 25000000,
+    //     printableBlack: 7000,
+    //     stockA4: 250,
+    //     colorPercentageHigh: 10,
+    //     colorPercentageThreshold: 10,
+    //   },
+    //   { merge: true }
+    // );
+    const docRef = doc(db, "PrintConfig", uid);
+    const getdoc = await getDoc(docRef);
+    return getdoc.data();
+  } catch (e) {
+    throw e;
+  }
+}
 export {
   app,
   query,
@@ -133,4 +159,5 @@ export {
   signOut,
   onSnapshot,
   where,
+  getPrinterConfig,
 };

@@ -10,11 +10,13 @@
   "license": "ISC",
   "devDependencies": {
     "@parcel/transformer-sass": "^2.11.0",
+    "buffer": "^6.0.3",
     "parcel": "^2.11.0",
     "process": "^0.11.10"
   },
   "dependencies": {
-    "firebase": "^10.7.2",
-    "pdf-lib": "^1.17.1"
+    "firebase": "^10.11.1",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^3.11.174"
   }
 }

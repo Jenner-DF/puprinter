@@ -1,10 +1,12 @@
 import icons from "../img/icons.svg";
 import printerloading from "../img/printerloading.gif";
 import PrintForm from "./printForms";
+import { DataProcessor } from "./fileProcess";
+import { getPrinterConfig } from "./firebaseConfig";
 
 export default class Panel {
   _parentEl;
-  generatePrintFormMarkup() {
+  generatePrintFormMarkup(printer) {
     // console.log(user); NOTE: make an object and set it to ${} so without signing in is ok! or divide wallet section
     return `
     <div class="section print__section_printForm">
@@ -35,8 +37,13 @@ export default class Panel {
           <label for="select-paper">Paper size</label>
           <select id="select-paper" name="select_paper" required>
             <option value="">Choose one option:</option>
-            <option value="short">Short (8.5" x 11")</option>
-            <option value="long">Long (8.5" x 13")</option>
+            <option value="short">Short (8.5" x 11") - ₱${
+              printer.priceShort
+            }</option>
+            <option value="long">Long (8.5" x 13") - ₱${
+              printer.priceLong
+            }</option>
+            <option value="a4">A4 (8.3" x 11.7") - ₱${printer.priceA4}</option>
           </select>
         </div>
         <!-- colored -->
@@ -44,7 +51,9 @@ export default class Panel {
           <label for="select-colored">Color</label>
           <select id="select-colored" name="select_colored" required>
             <option value="">Choose one option:</option>
-            <option value="colored">Colored</option>
+            <option value="colored">Colored +(₱${
+              printer.colorPercentageLow
+            } - ₱${printer.colorPercentageHigh})</option>
             <option value="grayscale">Grayscale</option>
           </select>
         </div>
@@ -60,15 +69,18 @@ export default class Panel {
           </select>
         </div>
         <div class="submit"><button type="button" class="openDialog">Submit</button></div>
-      </form>
+      </form> 
         <!-- DIALOG -->
         <dialog class="modal">
-        </dialog>
-    </div>`;
+        </dialog>`;
   }
 
-  renderPrintForm() {
-    const printFormMarkup = this.generatePrintFormMarkup();
+  async renderPrintForm() {
+    //NOTE: crashing when user logs in because of spinner
+    this.renderSpinner(this._parentEl.children[0].children[2].children[1]);
+    this.printer = await getPrinterConfig("printer1");
+    this._clear(this._parentEl.children[0].children[2].children[1]);
+    const printFormMarkup = this.generatePrintFormMarkup(this.printer);
     this._parentEl.insertAdjacentHTML("beforeend", printFormMarkup);
     this.addPrintFormListener();
   }
@@ -79,23 +91,33 @@ export default class Panel {
     const fileInput = this.printForm.querySelector("#file");
     this.fileLabel = this.printForm.querySelector(".file_label");
     const openDialog = this.printForm.querySelector(".openDialog");
-
+    const uploadLimit = this.printer.uploadLimitBytes;
     fileInput.addEventListener("change", function () {
       //need to be function() to get this
       console.log(this.files);
+      document.querySelector(".canvas_container").innerHTML = "";
       const selectedFile = this.files[0];
-      document.querySelector(".file_label").textContent = selectedFile?.name
+      const fileLabel = document.querySelector(".file_label");
+      fileLabel.textContent = selectedFile?.name
         ? selectedFile.name
         : "Upload a PDF file";
       console.log(selectedFile);
+      //25 MB×1024 KB/MB×1024 Bytes/KB=6,186,598  -> NETLIFY LIMIT 6MB
+      if (this.files[0].size > uploadLimit) {
+        alert("Please ensure that the file size does not exceed 25 MB.");
+        fileLabel.textContent = "Upload a PDF file";
+      }
+      if (this.files[0].type !== "application/pdf") {
+        alert("Please upload PDF file only.");
+        fileLabel.textContent = "Upload a PDF file";
+      }
+      DataProcessor.loadPDF(selectedFile);
     });
     // open modal after clicking submit
     openDialog.addEventListener("click", async () => {
       try {
         if (!this.printForm.file.files[0])
           throw new Error("No files uploaded yet!");
-        if (this.printForm.file.files[0].type !== "application/pdf")
-          throw new Error("Please upload PDF file only.");
         if (
           this.printForm.select_colored.value === "" ||
           this.printForm.select_paper.value === "" ||
@@ -115,13 +137,12 @@ export default class Panel {
     //show Price Dialog
     this.modal.showModal();
     this.renderSpinner(this.modal);
-    const priceFile = await PrintForm._generatePriceAmount(
+    this.priceFile = await DataProcessor.generatePriceAmount(
       this.printForm.file.files[0],
       this.printForm.select_paper.value,
-      this.printForm.select_colored.value,
-      true
+      this.printForm.select_colored.value
     );
-    this.showPrintFormPriceDialog(priceFile);
+    this.showPrintFormPriceDialog(this.priceFile);
   }
   showPrintFormPriceDialog(price) {
     const priceDialogMarkup = `
@@ -185,7 +206,8 @@ export default class Panel {
       this.printForm.file.files[0],
       this.printForm.select_colored.value,
       this.printForm.select_paper.value,
-      this.printForm.select_payment.value
+      this.printForm.select_payment.value,
+      this.priceFile
     );
     this._clear(this.modal);
     const pincodeMarkup = `
