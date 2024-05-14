@@ -83,7 +83,8 @@ class DataProcessor {
       }
     }
     console.log(`document final price is: ${finalprice}`);
-    return finalprice;
+    const finalpage = pdf.numPages;
+    return [finalprice, finalpage];
   }
 }
 

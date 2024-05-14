@@ -137,14 +137,14 @@ export default class Panel {
     //show Price Dialog
     this.modal.showModal();
     this.renderSpinner(this.modal);
-    this.priceFile = await DataProcessor.generatePriceAmount(
+    const [finalprice, finalpage] = await DataProcessor.generatePriceAmount(
       this.printForm.file.files[0],
       this.printForm.select_paper.value,
       this.printForm.select_colored.value
     );
-    this.showPrintFormPriceDialog(this.priceFile);
+    this.showPrintFormPriceDialog(finalprice, finalpage);
   }
-  showPrintFormPriceDialog(price) {
+  showPrintFormPriceDialog(price, page) {
     const priceDialogMarkup = `
       <div class="modal__section modal__text">
         <p>Amount to Pay:</p>
@@ -160,12 +160,12 @@ export default class Panel {
     this.modal.insertAdjacentHTML("afterbegin", priceDialogMarkup);
     //generate buttons inside the dialog
     this.modalsubmitlistener(document.querySelector(".btnSubmit"), () =>
-      this.showPrintFormPaymentDialog(this.paymentOption, price)
+      this.showPrintFormPaymentDialog(this.paymentOption, price, page)
     );
     this.modalcloselistener(document.querySelector(".closeModal"));
   }
   //NOTE: since e-wallet is disabled, no override needed, add only a flag
-  showPrintFormPaymentDialog(paymentOption, price) {
+  showPrintFormPaymentDialog(paymentOption, price, page) {
     try {
       if (paymentOption === "wallet") {
         const walletMarkup = `
@@ -186,13 +186,13 @@ export default class Panel {
         );
         this.modalcloselistener(document.querySelector(".closeModal"));
       } else {
-        this.generatePinCodeMarkup();
+        this.generatePinCodeMarkup(price, page);
       }
     } catch (e) {
       throw e;
     }
   }
-  async generatePinCodeMarkup() {
+  async generatePinCodeMarkup(price, page) {
     const gettingPincodeMarkup = `
     <div class="modal__section modal__text">
       <p>Generating file pin code...</p>
@@ -207,7 +207,8 @@ export default class Panel {
       this.printForm.select_colored.value,
       this.printForm.select_paper.value,
       this.printForm.select_payment.value,
-      this.priceFile
+      price,
+      page
     );
     this._clear(this.modal);
     const pincodeMarkup = `

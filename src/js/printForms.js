@@ -8,7 +8,7 @@ import { updateDoc } from "firebase/firestore";
 //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
 
 export default class PrintForm {
-  constructor(file, colorOption, paperType, paymentOption, price) {
+  constructor(file, colorOption, paperType, paymentOption, price, page) {
     // this.printerUID = "printer1";
     this.userID = auth?.currentUser?.uid ? auth.currentUser.uid : null;
     this.file = file;
@@ -16,12 +16,14 @@ export default class PrintForm {
     this.paperType = paperType;
     this.paymentOption = paymentOption;
     this.price = price;
+    this.page = page;
     console.log(
       this.userID,
       this.colorOption,
       this.file,
       this.paperType,
-      this.price
+      this.price,
+      this.page
     );
   }
   static async createInstance(
@@ -29,14 +31,16 @@ export default class PrintForm {
     colorOption,
     paperType,
     paymentOption,
-    price
+    price,
+    page
   ) {
     const instance = new PrintForm(
       file,
       colorOption,
       paperType,
       paymentOption,
-      price
+      price,
+      page
     );
     await instance._exportPrintFormToDB();
     return instance.pincode;
@@ -54,6 +58,7 @@ export default class PrintForm {
           filename: this.file.name,
           fileURL: this.fileurl,
           paperType: this.paperType,
+          page: this.page,
           price: this.price,
           colorOption: this.colorOption,
           paymentOption: this.paymentOption,
