@@ -21,51 +21,55 @@ export default class Panel {
               <svg>
                 <use href="${icons}#icon-uploadFile"></use>
               </svg>
-              <p class="file_label">Upload a PDF file</p>
+              <p class="file_label">Upload a PDF/JPG/PNG file
+              </p>
             </label>
             <input
               type="file"
               name="file"
               id="file"
               class="printForm__file_upload"
-              accept="application/pdf"
+              accept="application/pdf, image/jpeg, image/png"
             />
           </div>
         </div>
         <!-- paper size -->
         <div class="printForm__section">
           <label for="select-paper">Paper size</label>
-          <select id="select-paper" name="select_paper" required>
-            <option value="">Choose one option:</option>
-            <option value="short">Short (8.5" x 11") - ₱${
-              printer.priceShort
-            }</option>
-            <option value="long">Long (8.5" x 13") - ₱${
-              printer.priceLong
-            }</option>
+          <select id="select-paper" name="select_paper" required disabled>
+          <option value="short">Short (8.5" x 11") - ₱${
+            printer.priceShort
+          }</option>
+          <option value="long">Long (8.5" x 13") - ₱${
+            printer.priceLong
+          }</option>
             <option value="a4">A4 (8.3" x 11.7") - ₱${printer.priceA4}</option>
           </select>
         </div>
         <!-- colored -->
         <div class="printForm__section">
           <label for="select-colored">Color</label>
-          <select id="select-colored" name="select_colored" required>
-            <option value="">Choose one option:</option>
+          <select id="select-colored" name="select_colored" required disabled>
             <option value="colored">Colored +(₱${
               printer.colorPercentageLow
             } - ₱${printer.colorPercentageHigh})</option>
+            <option value="photo">Photo +(₱${printer.colorPercentageLow} - ₱${
+      printer.colorPercentageHigh
+    })</option>
+            <option value="docs">Docs +(₱${printer.colorPercentageLow} - ₱${
+      printer.colorPercentageHigh
+    })</option>
             <option value="grayscale">Grayscale</option>
           </select>
         </div>
         <!-- payment option -->
         <div class="printForm__section">
           <label for="select-payment">Payment Option</label>
-          <select id="select-payment" name="select_payment" required>
-            <option value="">Choose one option:</option>
+          <select id="select-payment" name="select_payment" required disabled>
+            <option value="machine">At the Machine</option>
             <option value="wallet"  ${
               this.uid ? "" : "disabled"
             }>E-wallet</option>
-            <option value="machine">At the Machine</option>
           </select>
         </div>
         <div class="submit"><button type="button" class="openDialog">Submit</button></div>
@@ -87,31 +91,50 @@ export default class Panel {
   addPrintFormListener() {
     this.modal = document.querySelector(".modal");
     this.printForm = document.querySelector(".printForm");
+    const selectColored = document.getElementById("select-colored");
+    const selectPaper = document.getElementById("select-paper");
+    const selectPayment = document.getElementById("select-payment");
     this.errorEl = document.querySelector(".errormsg");
     const fileInput = this.printForm.querySelector("#file");
     this.fileLabel = this.printForm.querySelector(".file_label");
+    const fileLabel = document.querySelector(".file_label");
+    let myFile;
     const openDialog = this.printForm.querySelector(".openDialog");
-    const uploadLimit = this.printer.uploadLimitBytes;
-    fileInput.addEventListener("change", function () {
+
+    const printer = this.printer;
+    fileInput.addEventListener("change", async function () {
       //need to be function() to get this
-      console.log(this.files);
-      document.querySelector(".canvas_container").innerHTML = "";
-      const selectedFile = this.files[0];
-      const fileLabel = document.querySelector(".file_label");
-      fileLabel.textContent = selectedFile?.name
-        ? selectedFile.name
-        : "Upload a PDF file";
-      console.log(selectedFile);
-      //25 MB×1024 KB/MB×1024 Bytes/KB=6,186,598  -> NETLIFY LIMIT 6MB
-      if (this.files[0].size > uploadLimit) {
-        alert("Please ensure that the file size does not exceed 25 MB.");
-        fileLabel.textContent = "Upload a PDF file";
+      try {
+        console.log(this.files);
+        document.querySelector(".canvas_container").innerHTML = "";
+        const selectedFile = this.files[0];
+        console.log(selectedFile);
+        //25 MB×1024 KB/MB×1024 Bytes/KB=6,186,598  -> NETLIFY LIMIT 6MB
+        if (selectedFile?.name) {
+          fileLabel.textContent = selectedFile.name;
+          myFile = new DataProcessor(selectedFile, printer);
+          console.log(myFile);
+          await myFile.checkFile(selectedFile);
+          // await DataProcessor.loadbytes(selectedFile);
+          selectColored.disabled = false;
+          selectPaper.disabled = false;
+          selectPayment.disabled = false;
+        } else {
+          fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+          document.querySelector(".canvas_container").innerHTML = "";
+        }
+      } catch (e) {
+        alert(e);
+        fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
-      if (this.files[0].type !== "application/pdf") {
-        alert("Please upload PDF file only.");
-        fileLabel.textContent = "Upload a PDF file";
-      }
-      DataProcessor.loadPDF(selectedFile);
+
+      // DataProcessor.loadPDF(selectedFile);
+    });
+    selectColored.addEventListener("change", () => {
+      this.myFile = myFile;
+      console.log(selectColored);
+      console.log(selectPaper);
+      console.log(selectPayment);
     });
     // open modal after clicking submit
     openDialog.addEventListener("click", async () => {
@@ -125,6 +148,7 @@ export default class Panel {
         )
           throw new Error("Please ensure all form fields are completed");
         this.errorEl.innerHTML = "";
+        this.myFile = myFile;
         this.paymentOption = this.printForm.select_payment.value;
         await this.renderPrintFormDialog();
       } catch (e) {
@@ -137,12 +161,14 @@ export default class Panel {
     //show Price Dialog
     this.modal.showModal();
     this.renderSpinner(this.modal);
-    const [finalprice, finalpage] = await DataProcessor.generatePriceAmount(
-      this.printForm.file.files[0],
+    await this.myFile.generatePriceAmount(
       this.printForm.select_paper.value,
       this.printForm.select_colored.value
     );
-    this.showPrintFormPriceDialog(finalprice, finalpage);
+    this.showPrintFormPriceDialog(
+      this.myFile.finalprice,
+      this.myFile.finalpage
+    );
   }
   showPrintFormPriceDialog(price, page) {
     const priceDialogMarkup = `

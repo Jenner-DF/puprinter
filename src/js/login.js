@@ -24,18 +24,13 @@ class loginPanel extends Panel {
   </div>
   </main>
   <div>
-    <h1 style="text-align:center;padding: 10px 0">Your PDF:</h1>
+    <h1 style="text-align:center;padding: 10px 0">Output PDF:</h1>
     <div class="canvas_container">
     </div>
     </div>
   <div class="disclaimer">
   <p class="disclaimer__text">
-    Disclaimer: By using our services, you agree to provide accurate
-    account information (email, phone number, and password) necessary for
-    file submissions. While we prioritize security, users are responsible
-    for protecting their login credentials. Users must ensure submitted
-    content complies with legal requirements, and any changes to our
-    disclaimer will be effective immediately.
+    Disclaimer: By using our services, you agree to provide accurate information necessary for file submissions. Users are responsible for ensuring submitted content complies with legal requirements. Any changes to this disclaimer will be effective immediately.
   </p>
 </div>
 </div>
