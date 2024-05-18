@@ -76,7 +76,10 @@ export default class Panel {
       </form> 
         <!-- DIALOG -->
         <dialog class="modal">
-        </dialog>`;
+        </dialog>
+        <input type="number" id="contrast" placeholder="Enter contrast">;
+        <input type="number" id="brightness" placeholder="Enter brightness">;
+        <input type="number" id="saturation" placeholder="Enter saturation">`;
   }
 
   async renderPrintForm() {
@@ -130,11 +133,13 @@ export default class Panel {
 
       // DataProcessor.loadPDF(selectedFile);
     });
-    selectColored.addEventListener("change", () => {
+    selectColored.addEventListener("change", async () => {
       this.myFile = myFile;
-      console.log(selectColored);
-      console.log(selectPaper);
-      console.log(selectPayment);
+
+      console.log("changing color!!!");
+      document.querySelector(".canvas_container").innerHTML = "";
+
+      await myFile.colorPhoto();
     });
     // open modal after clicking submit
     openDialog.addEventListener("click", async () => {
