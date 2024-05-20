@@ -50,7 +50,7 @@ export default class Panel {
         <div class="printForm__section">
           <label for="select-colored">Color</label>
           <select id="select-colored" name="select_colored" required disabled>
-            <option value="colored">Colored +(₱${
+            <option value="original">Original +(₱${
               printer.colorPercentageLow
             } - ₱${printer.colorPercentageHigh})</option>
             <option value="photo">Photo +(₱${printer.colorPercentageLow} - ₱${
@@ -132,6 +132,12 @@ export default class Panel {
       }
 
       // DataProcessor.loadPDF(selectedFile);
+    });
+    selectPaper.addEventListener("change", async () => {
+      this.myFile = myFile;
+      console.log("changing paper!!!");
+      document.querySelector(".canvas_container").innerHTML = "";
+      // await myFile.changePaper();
     });
     selectColored.addEventListener("change", async () => {
       this.myFile = myFile;

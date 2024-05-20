@@ -13,6 +13,21 @@ class DataProcessor {
     this.finalprice = 0;
     this.finalpage = 0;
     this.originalImageData = null;
+    this.newPdfBytes = null;
+    this.selections = {
+      paperSize: { short: [8.5, 11], long: [8.5, 13], a4: [8.3, 11.7] },
+      presets: {
+        //contrast,brightness,saturation
+        original: [1, 0, 1],
+        photo: [1.6, 25, 1.2],
+        doc: [1.8, 30, 1.1],
+        grayscale: [1, 0, 0],
+      },
+    };
+    this.userSelection = {
+      paperSize: this.selections.paperSize.short,
+      preset: this.selections.presets.original,
+    };
   }
 
   async colorDoc() {}
@@ -22,9 +37,11 @@ class DataProcessor {
         "Please ensure that the file size does not exceed 25 MB."
       );
     }
+    //check if PDF upload
     if (this.file.type === "application/pdf") {
       return await this.loadPDF(this.file, this.printer);
     } else if (
+      //cheeck if IMG upload
       this.file.type === "image/jpeg" ||
       this.file.type === "image/png"
     ) {
@@ -34,6 +51,7 @@ class DataProcessor {
     }
   }
   async loadIMG() {
+    //make the image pdf first then can use loadPDF()
     console.log(`this is my IMAGE!`);
   }
   async loadPDF() {
@@ -41,92 +59,223 @@ class DataProcessor {
     this.pdfBytes = await this.file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument(this.pdfBytes);
     this.pdf = await loadingTask.promise;
-
     // Loading a PDF document
-    console.log(`PDF loaded with ${this.pdf.numPages} pages.`);
     this.finalpage = this.pdf.numPages;
-    // this.pdf = pdf;
+    console.log(`PDF loaded with ${this.pdf.numPages} pages.`);
     if (this.finalpage > this.printer.pageLimit)
       throw new Error(
         `Please upload files with ${this.printer.pageLimit} pages or less only`
       );
+    //rendering each page
+    //get values for paper size,color
+    this.getUserSelection();
+
+    console.log(`my user options: ${this.userSelection}`);
+    //rendering each page
     for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
       const page = await this.pdf.getPage(pageNum);
-      await this.renderPage(page);
+      //add args for papersize and coloroption
+      await this.renderPage(page, pageNum);
     }
   }
-  async renderPage(page) {
-    const scale = 1.0; // Adjust scale for your needs
-    const viewport = page.getViewport({ scale: scale });
+  getUserSelection() {
+    const selectPaper = document.getElementById("select-paper").value;
+    const selectColored = document.getElementById("select-colored").value;
+    //paper options
+    if (selectPaper === "short")
+      this.userSelection.paperSize = this.selections.paperSize.short;
+    if (selectPaper === "long")
+      this.userSelection.paperSize = this.selections.paperSize.long;
+    if (selectPaper === "a4")
+      this.userSelection.paperSize = this.selections.paperSize.a4;
+    //color options
+    if (selectColored === "original")
+      this.userSelection.preset = this.selections.presets.original;
+    if (selectColored === "photo")
+      this.userSelection.preset = this.selections.presets.photo;
+    if (selectColored === "docs")
+      this.userSelection.preset = this.selections.presets.doc;
+    if (selectColored === "grayscale")
+      this.userSelection.preset = this.selections.presets.grayscale;
+  }
+  async renderPage(page, pageNum) {
+    const letterWidth = 612; // Letter width in points
+    const letterHeight = 1008; // Letter height in points
+
+    const viewport = page.getViewport({ scale: 1.0 });
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    canvas.width = letterWidth;
+    canvas.height = letterHeight;
     document.querySelector(".canvas_container").appendChild(canvas);
 
+    // Calculate the scale to fit the PDF page into Letter size
+    const scaleX = letterWidth / viewport.width;
+    const scaleY = letterHeight / viewport.height;
+    const scale = Math.min(scaleX, scaleY); // Use the smaller scale to maintain aspect ratio
+
+    // Get the scaled viewport
+    const scaledViewport = page.getViewport({ scale: scale });
+
+    // Calculate the offset to center the content only on x axis
+    const offsetX = (letterWidth - scaledViewport.width) / 2;
+    const offsetY = 0;
+
+    // Temporary canvas to render the scaled content
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });
+    tempCanvas.width = scaledViewport.width;
+    tempCanvas.height = scaledViewport.height;
+
     const renderContext = {
-      canvasContext: ctx,
-      viewport: viewport,
+      canvasContext: tempCtx,
+      viewport: scaledViewport,
     };
+
+    // Render the page onto the temporary canvas
     await page.render(renderContext).promise;
+    // Draw the scaled content onto the main canvas at the calculated offsets
+    ctx.drawImage(tempCanvas, offsetX, offsetY);
+
     this.originalImageData = ctx.getImageData(
       0,
       0,
       canvas.width,
       canvas.height
     );
+    document
+      .querySelector(".canvas_container")
+      .insertAdjacentHTML("beforeend", `<div> page ${pageNum}`);
     return canvas;
+
+    // const letterWidth = 8.5 * 72; // Letter width in points
+    // const letterHeight = 11 * 72; // Letter height in points
+    // // this.adjustPaper();
+    // const viewport = page.getViewport({ scale: 1.0 });
+    // // console.log("my viewport!");
+    // // console.log(viewport.height);
+    // // console.log(viewport.width);
+    // const canvas = document.createElement("canvas");
+    // const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    // canvas.width = letterWidth;
+    // canvas.height = letterHeight;
+    // document.querySelector(".canvas_container").appendChild(canvas);
+
+    // // Calculate the scale to fit the PDF page into Letter size
+    // const scaleX = letterWidth / viewport.width;
+    // const scaleY = letterHeight / viewport.height;
+    // const scale = Math.min(scaleX, scaleY); // Use the smaller scale to maintain aspect ratio
+    // // Get the scaled viewport
+    // const scaledViewport = page.getViewport({ scale: scale });
+
+    // const renderContext = {
+    //   canvasContext: ctx,
+    //   viewport: scaledViewport,
+    // };
+    // await page.render(renderContext).promise;
+    // ctx.drawImage(
+    //   canvas,
+    //   0,
+    //   0,
+    //   viewport.width,
+    //   viewport.height,
+    //   0,
+    //   0,
+    //   letterWidth,
+    //   letterHeight
+    // );
+    // this.originalImageData = ctx.getImageData(
+    //   0,
+    //   0,
+    //   canvas.width,
+    //   canvas.height
+    // );
+    // return canvas;
+  }
+  async createPDFFromCanvases(renderedCanvases) {
+    const pdfDoc = await PDFDocument.create();
+
+    renderedCanvases.forEach(async (canvas, index) => {
+      const imgData = canvas.toDataURL();
+      const imgBytes = Uint8Array.from(atob(imgData.split(",")[1]), (c) =>
+        c.charCodeAt(0)
+      );
+      console.log("tangina may sobra!");
+      console.log(index);
+      const pngImage = await pdfDoc.embedPng(imgBytes);
+      const pngDims = pngImage.scale(1);
+      // Add a blank page to the document
+      const page = pdfDoc.addPage();
+      page.setSize(612, 1008);
+      const mediaBox = page.getMediaBox();
+      //612,1008 - long
+      //576, 792 - short
+      page.setMediaBox(mediaBox.x, mediaBox.y, 612, 1008);
+      // Draw the JPG image in the center on x axis of the page
+      page.drawImage(pngImage, {
+        x: page.getWidth() / 2 - pngDims.width / 2,
+        y: 0,
+        width: pngDims.width,
+        height: pngDims.height,
+      });
+    });
+
+    return pdfDoc;
   }
   async analyzeColors(canvas, colorPercentageLow, colorPercentageHigh) {
     const ctx = canvas.getContext("2d");
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    this.imageData = data.data;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let data = imageData.data;
     let coloredPixels = 0;
 
     for (let i = 0; i < data.length; i += 4) {
-      const r = this.imageData[i];
-      const g = this.imageData[i + 1];
-      const b = this.imageData[i + 2];
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
       // Check if the pixel is not grayscale
       if (!(r === g && g === b)) {
         coloredPixels++;
       }
     }
-    const totalPixels = this.imageData.length / 4;
+    const totalPixels = data.length / 4;
     const colorPercentage = (coloredPixels / totalPixels) * 100;
     console.log(`Color percentage: ${colorPercentage.toFixed(2)}%`);
     return colorPercentage < 60 ? colorPercentageLow : colorPercentageHigh;
   }
   async colorPhoto() {
+    //delete later
+    this.getUserSelection();
+    console.log(this.userSelection);
     const contrast = Number(document.querySelector("#contrast").value);
     const brightness = Number(document.querySelector("#brightness").value);
     const saturation = Number(document.querySelector("#saturation").value);
+
     for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
       const page = await this.pdf.getPage(pageNum);
-      const canvas = await this.renderPage(page);
+      const canvas = await this.renderPage(page, pageNum);
 
       this.adjustContrast(canvas, contrast, brightness, saturation);
     }
+    const renderedCanvases = document.querySelectorAll(
+      ".canvas_container canvas"
+    );
+    const pdfDoc = await this.createPDFFromCanvases(renderedCanvases);
+    const pdfBytes = await pdfDoc.save({ addDefaultPage: false }); //this returns u8int that need for firebase url no need to convert to blob(just to download manually for now)
+    const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    console.log(link.href);
+    link.download = "generated.pdf";
+    link.click();
   }
   adjustContrast(canvas, contrast, brightness, saturation) {
     const ctx = canvas.getContext("2d");
     ctx.putImageData(this.originalImageData, 0, 0);
-
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    // You can implement your own contrast adjustment algorithm here.
-    // For simplicity, let's just increase the contrast of each pixel.
     let data = imageData.data;
     if (contrast !== 0) {
-      // console.log(`my contrast value: ${contrast}`);
-      // console.log(`${contrast !== 0}`);
-      // console.log(`${typeof contrast}`);
-      // console.log("ORIG PHOTO!");
       for (let i = 0; i < data.length; i += 4) {
-        //CONTRAST OLD
-        // data[i] *= 10.5; // Increase the red channel
-        // data[i + 1] *= 1.5; // Increase the green channel
-        // data[i + 2] *= 1.5; // Increase the blue channel
-
         // Adjust contrast
         data[i] = (data[i] - 128) * contrast + 128;
         data[i + 1] = (data[i + 1] - 128) * contrast + 128;
@@ -177,7 +326,6 @@ class DataProcessor {
         data[i + 2] = this.hueToRGB(p, q, h - 1 / 3) * 255;
       }
     }
-
     // No need to store `data`, directly modify `imageData.data`
     ctx.putImageData(imageData, 0, 0);
   }
@@ -191,6 +339,7 @@ class DataProcessor {
   }
   async generatePriceAmount(paperType, colorOption) {
     //get PDF data
+    this.finalprice = 0;
     let priceMultiplier;
     if (paperType === "short") priceMultiplier = this.printer.priceShort;
     if (paperType === "long") priceMultiplier = this.printer.priceLong;
