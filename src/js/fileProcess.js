@@ -12,10 +12,13 @@ class DataProcessor {
     this.pdf = null;
     this.finalprice = 0;
     this.finalpage = 0;
-    this.originalImageData = null;
     this.newPdfBytes = null;
     this.selections = {
-      paperSize: { short: [8.5, 11], long: [8.5, 13], a4: [8.3, 11.7] },
+      paperSize: {
+        short: [612.0, 792.0],
+        long: [612.0, 936.0],
+        a4: [595.28, 841.89],
+      }, //W x H
       presets: {
         //contrast,brightness,saturation
         original: [1, 0, 1],
@@ -75,7 +78,8 @@ class DataProcessor {
     for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
       const page = await this.pdf.getPage(pageNum);
       //add args for papersize and coloroption
-      await this.renderPage(page, pageNum);
+      const canvas = await this.renderPage(page, pageNum);
+      this.adjustContrast(canvas);
     }
   }
   getUserSelection() {
@@ -99,98 +103,43 @@ class DataProcessor {
       this.userSelection.preset = this.selections.presets.grayscale;
   }
   async renderPage(page, pageNum) {
-    const letterWidth = 612; // Letter width in points
-    const letterHeight = 1008; // Letter height in points
-
+    const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
     const viewport = page.getViewport({ scale: 1.0 });
     const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    canvas.width = letterWidth;
-    canvas.height = letterHeight;
+    this.ctx = canvas.getContext("2d", { willReadFrequently: true });
+    canvas.width = selectedWidth;
+    canvas.height = selectedHeight;
     document.querySelector(".canvas_container").appendChild(canvas);
-
     // Calculate the scale to fit the PDF page into Letter size
-    const scaleX = letterWidth / viewport.width;
-    const scaleY = letterHeight / viewport.height;
+    const scaleX = selectedWidth / viewport.width;
+    const scaleY = selectedHeight / viewport.height;
     const scale = Math.min(scaleX, scaleY); // Use the smaller scale to maintain aspect ratio
-
     // Get the scaled viewport
     const scaledViewport = page.getViewport({ scale: scale });
-
     // Calculate the offset to center the content only on x axis
-    const offsetX = (letterWidth - scaledViewport.width) / 2;
+    const offsetX = (selectedWidth - scaledViewport.width) / 2;
     const offsetY = 0;
-
     // Temporary canvas to render the scaled content
     const tempCanvas = document.createElement("canvas");
     const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });
     tempCanvas.width = scaledViewport.width;
     tempCanvas.height = scaledViewport.height;
-
     const renderContext = {
       canvasContext: tempCtx,
       viewport: scaledViewport,
     };
-
     // Render the page onto the temporary canvas
     await page.render(renderContext).promise;
     // Draw the scaled content onto the main canvas at the calculated offsets
-    ctx.drawImage(tempCanvas, offsetX, offsetY);
+    this.ctx.drawImage(tempCanvas, offsetX, offsetY);
+    //get data to be passed to color changer
+    // const imageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // this.ctx.putImageData(imageData, 0, 0);
 
-    this.originalImageData = ctx.getImageData(
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
     document
       .querySelector(".canvas_container")
       .insertAdjacentHTML("beforeend", `<div> page ${pageNum}`);
     return canvas;
-
-    // const letterWidth = 8.5 * 72; // Letter width in points
-    // const letterHeight = 11 * 72; // Letter height in points
-    // // this.adjustPaper();
-    // const viewport = page.getViewport({ scale: 1.0 });
-    // // console.log("my viewport!");
-    // // console.log(viewport.height);
-    // // console.log(viewport.width);
-    // const canvas = document.createElement("canvas");
-    // const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    // canvas.width = letterWidth;
-    // canvas.height = letterHeight;
-    // document.querySelector(".canvas_container").appendChild(canvas);
-
-    // // Calculate the scale to fit the PDF page into Letter size
-    // const scaleX = letterWidth / viewport.width;
-    // const scaleY = letterHeight / viewport.height;
-    // const scale = Math.min(scaleX, scaleY); // Use the smaller scale to maintain aspect ratio
-    // // Get the scaled viewport
-    // const scaledViewport = page.getViewport({ scale: scale });
-
-    // const renderContext = {
-    //   canvasContext: ctx,
-    //   viewport: scaledViewport,
-    // };
-    // await page.render(renderContext).promise;
-    // ctx.drawImage(
-    //   canvas,
-    //   0,
-    //   0,
-    //   viewport.width,
-    //   viewport.height,
-    //   0,
-    //   0,
-    //   letterWidth,
-    //   letterHeight
-    // );
-    // this.originalImageData = ctx.getImageData(
-    //   0,
-    //   0,
-    //   canvas.width,
-    //   canvas.height
-    // );
-    // return canvas;
   }
   async createPDFFromCanvases(renderedCanvases) {
     const pdfDoc = await PDFDocument.create();
@@ -242,37 +191,31 @@ class DataProcessor {
     console.log(`Color percentage: ${colorPercentage.toFixed(2)}%`);
     return colorPercentage < 60 ? colorPercentageLow : colorPercentageHigh;
   }
-  async colorPhoto() {
-    //delete later
-    this.getUserSelection();
-    console.log(this.userSelection);
-    const contrast = Number(document.querySelector("#contrast").value);
-    const brightness = Number(document.querySelector("#brightness").value);
-    const saturation = Number(document.querySelector("#saturation").value);
+  // async colorPhoto() {
+  //   //need to store to array all the original pageImageData
+  //   for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
+  //     const page = await this.pdf.getPage(pageNum);
+  //     const canvas = await this.renderPage(page, pageNum);
+  //     this.adjustContrast(canvas);
+  //   }
 
-    for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
-      const page = await this.pdf.getPage(pageNum);
-      const canvas = await this.renderPage(page, pageNum);
-
-      this.adjustContrast(canvas, contrast, brightness, saturation);
-    }
-    const renderedCanvases = document.querySelectorAll(
-      ".canvas_container canvas"
-    );
-    const pdfDoc = await this.createPDFFromCanvases(renderedCanvases);
-    const pdfBytes = await pdfDoc.save({ addDefaultPage: false }); //this returns u8int that need for firebase url no need to convert to blob(just to download manually for now)
-    const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement("a");
-    link.href = pdfUrl;
-    console.log(link.href);
-    link.download = "generated.pdf";
-    link.click();
-  }
-  adjustContrast(canvas, contrast, brightness, saturation) {
-    const ctx = canvas.getContext("2d");
-    ctx.putImageData(this.originalImageData, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  //   // //FOR SUBMISSION
+  //   // const renderedCanvases = document.querySelectorAll(
+  //   //   ".canvas_container canvas"
+  //   // );
+  //   // const pdfDoc = await this.createPDFFromCanvases(renderedCanvases);
+  //   // const pdfBytes = await pdfDoc.save({ addDefaultPage: false }); //this returns u8int that need for firebase url no need to convert to blob(just to download manually for now)
+  //   // const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+  //   // const pdfUrl = URL.createObjectURL(pdfBlob);
+  //   // const link = document.createElement("a");
+  //   // link.href = pdfUrl;
+  //   // console.log(link.href);
+  //   // link.download = "generated.pdf";
+  //   // link.click();
+  // }
+  adjustContrast(canvas) {
+    const [contrast, brightness, saturation] = this.userSelection.preset;
+    const imageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
     let data = imageData.data;
     if (contrast !== 0) {
       for (let i = 0; i < data.length; i += 4) {
@@ -326,8 +269,8 @@ class DataProcessor {
         data[i + 2] = this.hueToRGB(p, q, h - 1 / 3) * 255;
       }
     }
-    // No need to store `data`, directly modify `imageData.data`
-    ctx.putImageData(imageData, 0, 0);
+    // No need to store `data`, directly modify `imageData.data` (it will error)
+    this.ctx.putImageData(imageData, 0, 0);
   }
   hueToRGB(p, q, t) {
     if (t < 0) t += 1;

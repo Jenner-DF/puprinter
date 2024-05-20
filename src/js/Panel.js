@@ -103,7 +103,7 @@ export default class Panel {
     const fileLabel = document.querySelector(".file_label");
     let myFile;
     const openDialog = this.printForm.querySelector(".openDialog");
-
+    let mySelectedFile;
     const printer = this.printer;
     fileInput.addEventListener("change", async function () {
       //need to be function() to get this
@@ -118,16 +118,21 @@ export default class Panel {
           myFile = new DataProcessor(selectedFile, printer);
           console.log(myFile);
           await myFile.checkFile(selectedFile);
+          mySelectedFile = selectedFile;
           // await DataProcessor.loadbytes(selectedFile);
           selectColored.disabled = false;
           selectPaper.disabled = false;
           selectPayment.disabled = false;
         } else {
+          selectColored.disabled = true;
+          selectPaper.disabled = true;
+          selectPayment.disabled = true;
           fileLabel.textContent = "Upload a PDF/JPG/PNG file";
           document.querySelector(".canvas_container").innerHTML = "";
         }
       } catch (e) {
         alert(e);
+        console.log(e);
         fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
 
@@ -137,15 +142,14 @@ export default class Panel {
       this.myFile = myFile;
       console.log("changing paper!!!");
       document.querySelector(".canvas_container").innerHTML = "";
-      // await myFile.changePaper();
+      await myFile.checkFile(mySelectedFile);
     });
     selectColored.addEventListener("change", async () => {
       this.myFile = myFile;
-
       console.log("changing color!!!");
       document.querySelector(".canvas_container").innerHTML = "";
 
-      await myFile.colorPhoto();
+      await myFile.checkFile(mySelectedFile);
     });
     // open modal after clicking submit
     openDialog.addEventListener("click", async () => {
