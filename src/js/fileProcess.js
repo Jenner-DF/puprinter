@@ -1,4 +1,4 @@
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, rgb, degrees } from "pdf-lib";
 import { getPrinterConfig } from "./firebaseConfig";
 PDFDocument;
 import * as pdfjsLib from "pdfjs-dist/build/pdf";
@@ -14,6 +14,7 @@ class DataProcessor {
     this.printer = printer;
     this.finalprice = 0;
     this.finalpage = 0;
+    this.margin = 5; // size in pixels
     this.selections = {
       paperSizes: {
         short: [612.0, 792.0],
@@ -53,7 +54,7 @@ class DataProcessor {
     );
 
     await this.mergePDFbytes();
-    await this.mergeIMGtoPDFbytes();
+    // await this.mergeIMGtoPDFbytes();
     await this.loadPDF();
     // //check if PDF upload
     // if (this.file.type === "application/pdf") {
@@ -69,22 +70,70 @@ class DataProcessor {
     // }
   }
   async mergePDFbytes() {
+    this.getUserSelection();
     //get all files as arraybuffers
     const pdfArrayBuffers = await Promise.all(
       this.pdfFiles.map((file) => file.arrayBuffer())
     );
     // Create a new PDFDocument
     const mergedPdf = await PDFDocument.create();
+    //get user dimensions
+    const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
+
     // Loop through each PDF ArrayBuffer
     for (const pdfBytes of pdfArrayBuffers) {
       // Load the PDFDocument from the ArrayBuffer
       const pdfDoc = await PDFDocument.load(pdfBytes);
       // Get all the pages of the PDFDocument
-      const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      const pages = pdfDoc.getPages();
+      //adding new modifiedpdfpage because of bug in blank paper
+      //adding invisible '' because it cannot be empty
+      for (const page of pages) {
+        page.drawText("", {
+          x: 50, // X coordinate for the text
+          y: page.getHeight() - 50, // Y coordinate for the text
+          size: 12, // Font size
+          color: rgb(1, 1, 1), // white color, invisible
+        });
+      }
+      // Save the modified PDFDocument to bytes
+      const modifiedPdfBytes = await pdfDoc.save();
+      // Load the modified PDFDocument again
+      const modifiedPdfDoc = await PDFDocument.load(modifiedPdfBytes);
+      const modifiedPages = modifiedPdfDoc.getPages();
       // Add each page to the merged PDFDocument
-      pages.forEach((page) => {
-        mergedPdf.addPage(page);
-      });
+      for (let i = 0; i < modifiedPages.length; i++) {
+        console.log(i);
+        const page = pages[i];
+
+        // Add a new page with the specified dimensions
+        const newPage = mergedPdf.addPage([
+          selectedWidth + this.margin * 2,
+          selectedHeight + this.margin * 2,
+        ]);
+
+        // Calculate the scaling factor to fit the content into the new page
+        const scale = Math.min(
+          (selectedWidth - this.margin * 2) / page.getWidth(),
+          (selectedHeight - this.margin * 2) / page.getHeight()
+        );
+
+        // Get the dimensions of the page scaled to fit the new page
+        const scaledWidth = page.getWidth() * scale;
+        const scaledHeight = page.getHeight() * scale;
+
+        // Embed the current page in the new page
+        const [embeddedPage] = await mergedPdf.embedPdf(modifiedPdfBytes, [i]);
+
+        //embeds existing pdf page into the new page
+        newPage.drawPage(embeddedPage, {
+          x: this.margin + (selectedWidth - scaledWidth) / 2,
+          y: this.margin + (selectedHeight - scaledHeight) / 2,
+          width: scaledWidth,
+          height: scaledHeight,
+        });
+        // Draw the embedded page on the new page
+      }
     }
     // Save the merged PDFDocument to an ArrayBuffer
     const mergedPdfBytes = await mergedPdf.save();
@@ -92,10 +141,52 @@ class DataProcessor {
   }
   async mergeIMGtoPDFbytes() {
     this.getUserSelection();
+    const imgArrayBuffers = await Promise.all(
+      this.imgFiles.map((file) => file.arrayBuffer())
+    );
+    // Create a new PDFDocument
+    const mergedImg = await PDFDocument.create();
+    //get user dimensions
+    const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
+
+    // Loop through each image ArrayBuffer
+    for (const imageBytes of imgArrayBuffers) {
+      // Embed image into PDF
+      const image = await mergedImg.embedPng(imageBytes); // Change to embedJpg for JPEG images
+
+      // Add a new page with specified dimensions including margins
+      const page = mergedImg.addPage([
+        selectedWidth + this.margin * 2,
+        selectedHeight + this.margin * 2,
+      ]);
+
+      // Calculate the scaling factor to fit the content into the new page
+      const scale = Math.min(
+        (selectedWidth - this.margin * 2) / image.width,
+        (selectedHeight - this.margin * 2) / image.height
+      );
+
+      // Get the dimensions of the page scaled to fit the new page
+      const scaledWidth = image.width * scale;
+      const scaledHeight = image.height * scale;
+
+      // Draw the image on the page, centered within the margins
+      page.drawImage(image, {
+        x: this.margin + (selectedWidth - scaledWidth) / 2,
+        y: selectedHeight - scaledHeight - this.margin,
+        width: scaledWidth,
+        height: scaledHeight,
+      });
+    }
+
+    // Save the PDF document to an ArrayBuffer
+    const mergedImgBytes = await mergedImg.save();
+    this.file = mergedImgBytes;
   }
   async imgToPDF() {}
   async downloadPDF() {
     await this.mergePDFbytes();
+    // await this.mergeIMGtoPDFbytes();
     const pdfbytes = this.file;
     const pdfBlob = new Blob([pdfbytes], { type: "application/pdf" });
     const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -153,12 +244,29 @@ class DataProcessor {
     //orientation (just rotate the image, not the paper)
     this.userSelection.orientation = selectedOrientation;
     //paper options
-    if (selectedPaper === "short")
-      this.userSelection.paperSize = this.selections.paperSizes.short;
-    if (selectedPaper === "long")
-      this.userSelection.paperSize = this.selections.paperSizes.long;
-    if (selectedPaper === "a4")
-      this.userSelection.paperSize = this.selections.paperSizes.a4;
+
+    if (selectedOrientation === "landscape") {
+      if (selectedPaper === "short")
+        this.userSelection.paperSize = this.reverseDimensions(
+          this.selections.paperSizes.short
+        );
+      if (selectedPaper === "long")
+        this.userSelection.paperSize = this.reverseDimensions(
+          this.selections.paperSizes.long
+        );
+      if (selectedPaper === "a4")
+        this.userSelection.paperSize = this.reverseDimensions(
+          this.selections.paperSizes.a4
+        );
+    } else {
+      if (selectedPaper === "short")
+        this.userSelection.paperSize = this.selections.paperSizes.short;
+      if (selectedPaper === "long")
+        this.userSelection.paperSize = this.selections.paperSizes.long;
+      if (selectedPaper === "a4")
+        this.userSelection.paperSize = this.selections.paperSizes.a4;
+    }
+
     //color options
     if (selectedColored === "original")
       this.userSelection.preset = this.selections.presets.original;
@@ -177,18 +285,20 @@ class DataProcessor {
     const viewport = page.getViewport({ scale: 1.0 });
     const canvas = document.createElement("canvas");
     this.ctx = canvas.getContext("2d", { willReadFrequently: true });
-    canvas.width = selectedWidth;
-    canvas.height = selectedHeight;
+    // Adjust the canvas width and height to include the this.margins
+    canvas.width = selectedWidth + this.margin * 2;
+    canvas.height = selectedHeight + this.margin * 2;
     document.querySelector(".canvas_container").appendChild(canvas);
     // Calculate the scale to fit the PDF page into Letter size
-    const scaleX = selectedWidth / viewport.width;
-    const scaleY = selectedHeight / viewport.height;
+    const scaleX = (selectedWidth - this.margin * 2) / viewport.width;
+    const scaleY = (selectedHeight - this.margin * 2) / viewport.height;
     const scale = Math.min(scaleX, scaleY); // Use the smaller scale to maintain aspect ratio
+
     // Get the scaled viewport
     const scaledViewport = page.getViewport({ scale: scale });
-    // Calculate the offset to center the content only on x axis
-    const offsetX = (selectedWidth - scaledViewport.width) / 2;
-    const offsetY = 0;
+    // Calculate the offset to center the content within the margins
+    const offsetX = (canvas.width - scaledViewport.width) / 2;
+    const offsetY = (canvas.height - scaledViewport.height) / 2;
     // Temporary canvas to render the scaled content
     const tempCanvas = document.createElement("canvas");
     const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });

@@ -172,7 +172,8 @@ export default class Panel {
         downloadPDF.disabled = true;
         this.renderError(this.errorEl, e);
         fileInput.disabled = false;
-
+        console.log("TAENAmo");
+        console.error(e);
         console.log(e);
         fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
