@@ -126,9 +126,10 @@
         // border: 2px solid blue;
         width: 20rem;
         margin: 0 auto;
-        text-overflow: ellipsis;
+        // text-overflow: ellipsis;
         white-space: nowrap;
-        overflow: hidden;
+        overflow-x: auto;
+        overflow-y: hidden;
       }
     }
     input {
@@ -140,8 +141,17 @@
     }
   }
 }
-.submit {
+.submit,
+.download {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+.download > button {
+  background-color: darken($color-primary, 5%);
+  color: white;
+}
+.download > button:hover {
+  color: black;
+  transition: all 0.3s;
 }

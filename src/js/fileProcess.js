@@ -1,20 +1,21 @@
 import { PDFDocument } from "pdf-lib";
 import { getPrinterConfig } from "./firebaseConfig";
 PDFDocument;
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
+import * as pdfjsLib from "pdfjs-dist/build/pdf";
+// import * as pdfjsLib from "pdfjs-dist/legacy/bu ild/pdf";
+
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 class DataProcessor {
-  constructor(file, printer) {
-    this.file = file;
+  constructor(files, printer) {
+    this.files = Array.from(files);
+    this.file = null;
     this.printer = printer;
-    this.pdf = null;
     this.finalprice = 0;
     this.finalpage = 0;
-    this.newPdfBytes = null;
     this.selections = {
-      paperSize: {
+      paperSizes: {
         short: [612.0, 792.0],
         long: [612.0, 936.0],
         a4: [595.28, 841.89],
@@ -22,57 +23,111 @@ class DataProcessor {
       presets: {
         //contrast,brightness,saturation
         original: [1, 0, 1],
-        photo: [1.6, 25, 1.2],
-        doc: [1.8, 30, 1.1],
+        photo: [1.5, 25, 1.3],
+        doc: [2.2, 10, 1.1],
         grayscale: [1, 0, 0],
       },
     };
     this.userSelection = {
-      paperSize: this.selections.paperSize.short,
+      paperSize: this.selections.paperSizes.short,
       preset: this.selections.presets.original,
+      copies: 1,
+      orientation: "portrait",
     };
   }
 
-  async colorDoc() {}
   async checkFile() {
-    if (this.file.size > this.printer.uploadLimitBytes) {
+    const totalSize = this.files.reduce((acc, file) => acc + file.size, 0);
+    if (totalSize > this.printer.uploadLimitBytes) {
       throw new Error(
         "Please ensure that the file size does not exceed 25 MB."
       );
     }
-    //check if PDF upload
-    if (this.file.type === "application/pdf") {
-      return await this.loadPDF(this.file, this.printer);
-    } else if (
-      //cheeck if IMG upload
-      this.file.type === "image/jpeg" ||
-      this.file.type === "image/png"
-    ) {
-      this.loadIMG();
-    } else {
-      throw new Error("Please upload a PDF/JPG/PNG file only.");
+    //pdf file array
+    this.pdfFiles = this.files.filter(
+      (file) => file.type === "application/pdf"
+    );
+    //jpg/png file array
+    this.imgFiles = this.files.filter((file) =>
+      ["image/jpeg", "image/png"].includes(file.type)
+    );
+
+    await this.mergePDFbytes();
+    await this.mergeIMGtoPDFbytes();
+    await this.loadPDF();
+    // //check if PDF upload
+    // if (this.file.type === "application/pdf") {
+    //   return await this.loadPDF(this.file, this.printer);
+    // } else if (
+    //   //cheeck if IMG upload
+    //   this.file.type === "image/jpeg" ||
+    //   this.file.type === "image/png"
+    // ) {
+    //   this.loadIMG();
+    // } else {
+    //   throw new Error("Please upload a PDF/JPG/PNG file only.");
+    // }
+  }
+  async mergePDFbytes() {
+    //get all files as arraybuffers
+    const pdfArrayBuffers = await Promise.all(
+      this.pdfFiles.map((file) => file.arrayBuffer())
+    );
+    // Create a new PDFDocument
+    const mergedPdf = await PDFDocument.create();
+    // Loop through each PDF ArrayBuffer
+    for (const pdfBytes of pdfArrayBuffers) {
+      // Load the PDFDocument from the ArrayBuffer
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      // Get all the pages of the PDFDocument
+      const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      // Add each page to the merged PDFDocument
+      pages.forEach((page) => {
+        mergedPdf.addPage(page);
+      });
     }
+    // Save the merged PDFDocument to an ArrayBuffer
+    const mergedPdfBytes = await mergedPdf.save();
+    this.file = mergedPdfBytes;
   }
-  async loadIMG() {
-    //make the image pdf first then can use loadPDF()
-    console.log(`this is my IMAGE!`);
+  async mergeIMGtoPDFbytes() {
+    this.getUserSelection();
   }
+  async imgToPDF() {}
+  async downloadPDF() {
+    await this.mergePDFbytes();
+    const pdfbytes = this.file;
+    const pdfBlob = new Blob([pdfbytes], { type: "application/pdf" });
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    console.log(link.href);
+    link.download = "lossless.pdf";
+    link.click();
+    URL.revokeObjectURL(pdfUrl); // Clean up URL object
+    //lossless
+    // console.log(`my DATA`);
+    // console.log(mergedFileBytes);
+    // console.log(this.pdf);
+  }
+  //SAME JUST LOAD A SINGLE PDF FILE TO BE SAME CODE
   async loadPDF() {
     //make pdf into bytes
-    this.pdfBytes = await this.file.arrayBuffer();
+    this.pdfBytes = this.file;
     const loadingTask = pdfjsLib.getDocument(this.pdfBytes);
     this.pdf = await loadingTask.promise;
     // Loading a PDF document
     this.finalpage = this.pdf.numPages;
     console.log(`PDF loaded with ${this.pdf.numPages} pages.`);
+
     if (this.finalpage > this.printer.pageLimit)
       throw new Error(
         `Please upload files with ${this.printer.pageLimit} pages or less only`
       );
-    //rendering each page
-    //get values for paper size,color
-    this.getUserSelection();
 
+    //get user selection from ui
+    this.getUserSelection();
     console.log(`my user options: ${this.userSelection}`);
     //rendering each page
     for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
@@ -82,25 +137,40 @@ class DataProcessor {
       this.adjustContrast(canvas);
     }
   }
+  async loadIMG() {
+    //make the image pdf first then can use loadPDF()
+    console.log(`this is my IMAGE!`);
+  }
+
   getUserSelection() {
-    const selectPaper = document.getElementById("select-paper").value;
-    const selectColored = document.getElementById("select-colored").value;
+    const selectedPaper = document.getElementById("select-paper").value;
+    const selectedColored = document.getElementById("select-colored").value;
+    const selectedOrientation =
+      document.getElementById("select-orientation").value;
+    const selectedCopies = document.getElementById("select-copies").value;
+    //copies
+    this.userSelection.copies = selectedCopies;
+    //orientation (just rotate the image, not the paper)
+    this.userSelection.orientation = selectedOrientation;
     //paper options
-    if (selectPaper === "short")
-      this.userSelection.paperSize = this.selections.paperSize.short;
-    if (selectPaper === "long")
-      this.userSelection.paperSize = this.selections.paperSize.long;
-    if (selectPaper === "a4")
-      this.userSelection.paperSize = this.selections.paperSize.a4;
+    if (selectedPaper === "short")
+      this.userSelection.paperSize = this.selections.paperSizes.short;
+    if (selectedPaper === "long")
+      this.userSelection.paperSize = this.selections.paperSizes.long;
+    if (selectedPaper === "a4")
+      this.userSelection.paperSize = this.selections.paperSizes.a4;
     //color options
-    if (selectColored === "original")
+    if (selectedColored === "original")
       this.userSelection.preset = this.selections.presets.original;
-    if (selectColored === "photo")
+    if (selectedColored === "photo")
       this.userSelection.preset = this.selections.presets.photo;
-    if (selectColored === "docs")
+    if (selectedColored === "docs")
       this.userSelection.preset = this.selections.presets.doc;
-    if (selectColored === "grayscale")
+    if (selectedColored === "grayscale")
       this.userSelection.preset = this.selections.presets.grayscale;
+  }
+  reverseDimensions(dimensions) {
+    return [dimensions[1], dimensions[0]];
   }
   async renderPage(page, pageNum) {
     const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
@@ -130,6 +200,7 @@ class DataProcessor {
     };
     // Render the page onto the temporary canvas
     await page.render(renderContext).promise;
+
     // Draw the scaled content onto the main canvas at the calculated offsets
     this.ctx.drawImage(tempCanvas, offsetX, offsetY);
     //get data to be passed to color changer
@@ -141,36 +212,7 @@ class DataProcessor {
       .insertAdjacentHTML("beforeend", `<div> page ${pageNum}`);
     return canvas;
   }
-  async createPDFFromCanvases(renderedCanvases) {
-    const pdfDoc = await PDFDocument.create();
 
-    renderedCanvases.forEach(async (canvas, index) => {
-      const imgData = canvas.toDataURL();
-      const imgBytes = Uint8Array.from(atob(imgData.split(",")[1]), (c) =>
-        c.charCodeAt(0)
-      );
-      console.log("tangina may sobra!");
-      console.log(index);
-      const pngImage = await pdfDoc.embedPng(imgBytes);
-      const pngDims = pngImage.scale(1);
-      // Add a blank page to the document
-      const page = pdfDoc.addPage();
-      page.setSize(612, 1008);
-      const mediaBox = page.getMediaBox();
-      //612,1008 - long
-      //576, 792 - short
-      page.setMediaBox(mediaBox.x, mediaBox.y, 612, 1008);
-      // Draw the JPG image in the center on x axis of the page
-      page.drawImage(pngImage, {
-        x: page.getWidth() / 2 - pngDims.width / 2,
-        y: 0,
-        width: pngDims.width,
-        height: pngDims.height,
-      });
-    });
-
-    return pdfDoc;
-  }
   async analyzeColors(canvas, colorPercentageLow, colorPercentageHigh) {
     const ctx = canvas.getContext("2d");
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -199,19 +241,6 @@ class DataProcessor {
   //     this.adjustContrast(canvas);
   //   }
 
-  //   // //FOR SUBMISSION
-  //   // const renderedCanvases = document.querySelectorAll(
-  //   //   ".canvas_container canvas"
-  //   // );
-  //   // const pdfDoc = await this.createPDFFromCanvases(renderedCanvases);
-  //   // const pdfBytes = await pdfDoc.save({ addDefaultPage: false }); //this returns u8int that need for firebase url no need to convert to blob(just to download manually for now)
-  //   // const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
-  //   // const pdfUrl = URL.createObjectURL(pdfBlob);
-  //   // const link = document.createElement("a");
-  //   // link.href = pdfUrl;
-  //   // console.log(link.href);
-  //   // link.download = "generated.pdf";
-  //   // link.click();
   // }
   adjustContrast(canvas) {
     const [contrast, brightness, saturation] = this.userSelection.preset;
@@ -303,6 +332,49 @@ class DataProcessor {
       }
     }
     console.log(`document final price is: ${this.finalprice}`);
+  }
+  async generateFinalFile() {
+    //FOR SUBMISSION
+    const renderedCanvases = document.querySelectorAll(
+      ".canvas_container canvas"
+    );
+    const pdfDoc = await this.createPDFFromCanvases(renderedCanvases);
+    const pdfBytes = await pdfDoc.save({ addDefaultPage: false }); //this returns u8int that need for firebase url no need to convert to blob(just to download manually for now)
+    const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    console.log(link.href);
+    link.download = "generated.pdf";
+    link.click();
+  }
+  async createPDFFromCanvases(renderedCanvases) {
+    const pdfDoc = await PDFDocument.create();
+
+    for (const canvas of renderedCanvases) {
+      const imgData = canvas.toDataURL();
+      const imgBytes = Uint8Array.from(atob(imgData.split(",")[1]), (c) =>
+        c.charCodeAt(0)
+      );
+      const pngImage = await pdfDoc.embedPng(imgBytes);
+      const pngDims = pngImage.scale(1);
+
+      // Add a blank page to the document
+      const page = pdfDoc.addPage();
+
+      // Assuming `this.userSelection.paperSize` contains the dimensions in points
+      const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
+      page.setSize(selectedWidth, selectedHeight);
+
+      // Draw the PNG image in the center on x-axis and at the top on y-axis
+      page.drawImage(pngImage, {
+        x: page.getWidth() / 2 - pngDims.width / 2,
+        y: 0,
+        width: pngDims.width,
+        height: pngDims.height,
+      });
+    }
+    return pdfDoc;
   }
 }
 

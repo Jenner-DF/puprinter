@@ -28,7 +28,8 @@ export default class Panel {
               type="file"
               name="file"
               id="file"
-              class="printForm__file_upload"
+              class="printForm__file_upload" 
+              multiple
               accept="application/pdf, image/jpeg, image/png"
             />
           </div>
@@ -62,6 +63,19 @@ export default class Panel {
             <option value="grayscale">Grayscale</option>
           </select>
         </div>
+        <!-- copies -->
+        <div class="printForm__section">
+          <label for="select-copies">Copies</label>
+          <input type="number" id="select-copies" name="select-copies" min="1" max="30" value="1" disabled>
+        </div>
+        <!-- orientation -->
+        <div class="printForm__section">
+          <label for="select-payment">Orientation</label>
+          <select id="select-orientation" name="select_orientation" required disabled>
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
         <!-- payment option -->
         <div class="printForm__section">
           <label for="select-payment">Payment Option</label>
@@ -73,15 +87,16 @@ export default class Panel {
           </select>
         </div>
         <div class="submit"><button type="button" class="openDialog">Submit</button></div>
+        <div class="download"><button disabled type="button" class="downloadPDF hidden" >Download PDF</button></div>
       </form> 
         <!-- DIALOG -->
         <dialog class="modal">
         </dialog>
-        <input type="number" id="contrast" placeholder="Enter contrast">;
-        <input type="number" id="brightness" placeholder="Enter brightness">;
-        <input type="number" id="saturation" placeholder="Enter saturation">`;
+       `;
   }
-
+  // <input type="number" id="contrast" placeholder="Enter contrast">;
+  // <input type="number" id="brightness" placeholder="Enter brightness">;
+  // <input type="number" id="saturation" placeholder="Enter saturation">
   async renderPrintForm() {
     //NOTE: crashing when user logs in because of spinner
     this.renderSpinner(this._parentEl.children[0].children[2].children[1]);
@@ -97,55 +112,113 @@ export default class Panel {
     const selectColored = document.getElementById("select-colored");
     const selectPaper = document.getElementById("select-paper");
     const selectPayment = document.getElementById("select-payment");
+    const selectCopies = document.getElementById("select-copies");
+    const selectOrientation = document.getElementById("select-orientation");
     this.errorEl = document.querySelector(".errormsg");
     const fileInput = this.printForm.querySelector("#file");
     this.fileLabel = this.printForm.querySelector(".file_label");
     const fileLabel = document.querySelector(".file_label");
-    let myFile;
     const openDialog = this.printForm.querySelector(".openDialog");
+    const downloadPDF = this.printForm.querySelector(".downloadPDF");
     let mySelectedFile;
     const printer = this.printer;
-    fileInput.addEventListener("change", async function () {
+    //prevents submission of prinform form
+    this.printForm.addEventListener("submit", (e) => e.preventDefault());
+    fileInput.addEventListener("change", async (e) => {
       //need to be function() to get this
       try {
-        console.log(this.files);
+        const files = e.target.files;
         document.querySelector(".canvas_container").innerHTML = "";
-        const selectedFile = this.files[0];
-        console.log(selectedFile);
+        downloadPDF.classList.add("hidden");
+        this._clear(this.errorEl);
+
         //25 MB×1024 KB/MB×1024 Bytes/KB=6,186,598  -> NETLIFY LIMIT 6MB
-        if (selectedFile?.name) {
-          fileLabel.textContent = selectedFile.name;
-          myFile = new DataProcessor(selectedFile, printer);
-          console.log(myFile);
-          await myFile.checkFile(selectedFile);
-          mySelectedFile = selectedFile;
-          // await DataProcessor.loadbytes(selectedFile);
-          selectColored.disabled = false;
-          selectPaper.disabled = false;
-          selectPayment.disabled = false;
-        } else {
+        if (files.length === 0) {
           selectColored.disabled = true;
           selectPaper.disabled = true;
           selectPayment.disabled = true;
+          selectOrientation.disabled = true;
+          selectCopies.disabled = true;
+          downloadPDF.disabled = true;
           fileLabel.textContent = "Upload a PDF/JPG/PNG file";
-          document.querySelector(".canvas_container").innerHTML = "";
+          return;
         }
+        //prettier-ignore
+        if (files.length > 5) throw new Error("Please upload up to 5 files only.");
+
+        const filenames = Array.from(files).reduce((acc, file) => {
+          acc.push(file.name);
+          return acc;
+        }, []);
+        fileLabel.textContent = filenames.join(", ");
+        this.myFile = new DataProcessor(files, printer);
+        //disables file input while loading
+        fileInput.disabled = true;
+        await this.myFile.checkFile();
+        fileInput.disabled = false;
+        downloadPDF.classList.remove("hidden");
+        selectColored.disabled = false;
+        selectPaper.disabled = false;
+        selectPayment.disabled = false;
+        selectOrientation.disabled = false;
+        selectCopies.disabled = false;
+        downloadPDF.disabled = false;
       } catch (e) {
-        alert(e);
+        selectColored.disabled = true;
+        selectPaper.disabled = true;
+        selectPayment.disabled = true;
+        selectOrientation.disabled = true;
+        selectCopies.disabled = true;
+        downloadPDF.disabled = true;
+        this.renderError(this.errorEl, e);
+        fileInput.disabled = false;
+
         console.log(e);
         fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
 
       // DataProcessor.loadPDF(selectedFile);
     });
+    downloadPDF.addEventListener("click", async (e) => {
+      try {
+        await this.myFile.downloadPDF();
+      } catch (e) {
+        selectColored.disabled = true;
+        selectPaper.disabled = true;
+        selectPayment.disabled = true;
+        selectOrientation.disabled = true;
+        selectCopies.disabled = true;
+        alert(e);
+        console.log(e);
+        fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+      }
+    });
     selectPaper.addEventListener("change", async () => {
-      this.myFile = myFile;
       console.log("changing paper!!!");
       document.querySelector(".canvas_container").innerHTML = "";
       await myFile.checkFile(mySelectedFile);
     });
+    selectColored.addEventListener(
+      "click",
+      () => {
+        const selectColoredMarkup = `
+      <div class="modal__section modal__text">
+        <p>WARNING:</p>
+      </div>
+      <div class="modal__section modal__img">
+        <p class="modal__img_text_long">Changing color results to lower quality for PDFs</p>
+      </div>
+      <div class="modal__section modal__btns">
+        <button class="btn closeModal">Continue</button>
+      </div>`;
+        this._clear(this.modal);
+        this.modal.showModal();
+        this.modal.insertAdjacentHTML("afterbegin", selectColoredMarkup);
+        this.modalcloselistener(document.querySelector(".closeModal"));
+      },
+      { once: true }
+    );
     selectColored.addEventListener("change", async () => {
-      this.myFile = myFile;
       console.log("changing color!!!");
       document.querySelector(".canvas_container").innerHTML = "";
 
@@ -163,8 +236,8 @@ export default class Panel {
         )
           throw new Error("Please ensure all form fields are completed");
         this.errorEl.innerHTML = "";
-        this.myFile = myFile;
         this.paymentOption = this.printForm.select_payment.value;
+        await this.myFile.generateFinalFile();
         await this.renderPrintFormDialog();
       } catch (e) {
         this.renderError(this.errorEl, e);
@@ -174,6 +247,7 @@ export default class Panel {
   async renderPrintFormDialog() {
     const modImg = document.querySelector(".modal__img");
     //show Price Dialog
+    this._clear(this.modal);
     this.modal.showModal();
     this.renderSpinner(this.modal);
     await this.myFile.generatePriceAmount(
@@ -185,13 +259,13 @@ export default class Panel {
       this.myFile.finalpage
     );
   }
-  showPrintFormPriceDialog(price, page) {
+  showPrintFormPriceDialog() {
     const priceDialogMarkup = `
       <div class="modal__section modal__text">
         <p>Amount to Pay:</p>
       </div>
       <div class="modal__section modal__img">
-        <p class="modal__img_text">₱${price}</p>
+        <p class="modal__img_text">₱${this.myFile.finalprice}</p>
       </div>
       <div class="modal__section modal__btns">
         <button class="btn btn__main btnSubmit">Print</button>
@@ -201,12 +275,12 @@ export default class Panel {
     this.modal.insertAdjacentHTML("afterbegin", priceDialogMarkup);
     //generate buttons inside the dialog
     this.modalsubmitlistener(document.querySelector(".btnSubmit"), () =>
-      this.showPrintFormPaymentDialog(this.paymentOption, price, page)
+      this.showPrintFormPaymentDialog(this.paymentOption)
     );
     this.modalcloselistener(document.querySelector(".closeModal"));
   }
   //NOTE: since e-wallet is disabled, no override needed, add only a flag
-  showPrintFormPaymentDialog(paymentOption, price, page) {
+  showPrintFormPaymentDialog(paymentOption) {
     try {
       if (paymentOption === "wallet") {
         const walletMarkup = `
@@ -214,7 +288,7 @@ export default class Panel {
           <p>E-Wallet Payment Confirmation:</p>
         </div>
         <div class="modal__section modal__img">
-          <p class="modal__img_text_wallet">An amount of ₱${price} will be deducted from your account. Proceed?</p>
+          <p class="modal__img_text_wallet">An amount of ₱${this.myFile.finalprice} will be deducted from your account. Proceed?</p>
         </div>
         <div class="modal__section modal__btns">
           <button class="btn btn__main btnSubmit">Confirm</button>
@@ -227,13 +301,13 @@ export default class Panel {
         );
         this.modalcloselistener(document.querySelector(".closeModal"));
       } else {
-        this.generatePinCodeMarkup(price, page);
+        this.generatePinCodeMarkup();
       }
     } catch (e) {
       throw e;
     }
   }
-  async generatePinCodeMarkup(price, page) {
+  async generatePinCodeMarkup() {
     const gettingPincodeMarkup = `
     <div class="modal__section modal__text">
       <p>Generating file pin code...</p>
@@ -248,8 +322,8 @@ export default class Panel {
       this.printForm.select_colored.value,
       this.printForm.select_paper.value,
       this.printForm.select_payment.value,
-      price,
-      page
+      this.myFile.finalprice,
+      this.myFile.finalpage
     );
     this._clear(this.modal);
     const pincodeMarkup = `

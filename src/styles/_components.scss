@@ -47,7 +47,7 @@ dialog {
   overflow: hidden;
   p {
     font-weight: 600;
-    font-size: 1.6rem;
+    font-size: 2rem;
     width: 100%;
     display: flex;
     text-align: center;
@@ -71,6 +71,9 @@ dialog {
       gap: 10px;
       &_text {
         font-size: 4.4rem;
+        &_long {
+          font-size: 1.6rem;
+        }
         &_wallet {
           font-size: 1.4rem;
         }

@@ -31,21 +31,27 @@ const spinner = ` <div class="spinner">
 </svg>
 </div>`;
 //NOTE: APP;
-onAuthStateChanged(auth, async (user) => {
-  await handleRedirectAuth();
-  document.body.insertAdjacentHTML("afterbegin", "");
-  document.body.insertAdjacentHTML("afterbegin", spinner);
-  document.body.innerHTML = "";
-  document.body.innerHTML = spinner;
-  if (user) {
-    console.log(user);
-    const admin = await getUserProfile(user.uid);
-    console.log(admin.isAdmin);
-    admin.isAdmin
-      ? new adminPanel(user.uid, admin.isAdmin)
-      : new userPanel(user.uid, admin.isAdmin);
-  } else {
-    loginPanel.render();
-  }
-});
+try {
+  onAuthStateChanged(auth, async (user) => {
+    await handleRedirectAuth();
+    document.body.insertAdjacentHTML("afterbegin", "");
+    document.body.insertAdjacentHTML("afterbegin", spinner);
+    document.body.innerHTML = "";
+    document.body.innerHTML = spinner;
+    if (user) {
+      console.log(user);
+      const admin = await getUserProfile(user.uid);
+      console.log(admin.isAdmin);
+      admin.isAdmin
+        ? new adminPanel(user.uid, admin.isAdmin)
+        : new userPanel(user.uid, admin.isAdmin);
+    } else {
+      loginPanel.render();
+    }
+  });
+} catch (e) {
+  alert(e);
+  console.log(e);
+}
+
 //NOTE: APP;
