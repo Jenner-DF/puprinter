@@ -226,6 +226,8 @@ export default class Panel {
         await this.myFile.checkFile();
         disableUserInputButtons(false);
       } catch (e) {
+        document.querySelector(".canvas_container").innerHTML = "";
+        selectCopies.value = 1;
         disableUserInputButtons(true);
         fileInput.disabled = false;
         this.renderError(this.errorEl, e);
