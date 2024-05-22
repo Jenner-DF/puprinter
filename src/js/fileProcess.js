@@ -9,8 +9,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 class DataProcessor {
   constructor(files, printer) {
-    this.files = Array.from(files);
-    this.file = null;
+    this.originalFiles = Array.from(files);
     this.printer = printer;
     this.finalprice = 0;
     this.finalpage = 0;
@@ -38,39 +37,45 @@ class DataProcessor {
   }
 
   async checkFile() {
-    const totalSize = this.files.reduce((acc, file) => acc + file.size, 0);
+    //get user selection
+    this.getUserSelection();
+    this.userFiles = [];
+
+    //make new array with number of copies included
+    for (let i = 0; i < this.userSelection.copies; i++) {
+      this.userFiles = [...this.userFiles, ...this.originalFiles];
+    }
+    const totalSize = this.userFiles.reduce((acc, file) => acc + file.size, 0);
     if (totalSize > this.printer.uploadLimitBytes) {
       throw new Error(
         "Please ensure that the file size does not exceed 25 MB."
       );
     }
-    //pdf file array
-    this.pdfFiles = this.files.filter(
+    //make pdf file array
+    this.pdfFiles = this.userFiles.filter(
       (file) => file.type === "application/pdf"
     );
-    //jpg/png file array
-    this.imgFiles = this.files.filter((file) =>
-      ["image/jpeg", "image/png"].includes(file.type)
+    //make jpg/png file array
+    this.imgFiles = this.userFiles.filter((file) =>
+      ["image/jpeg"].includes(file.type)
     );
-
-    await this.mergePDFbytes();
-    // await this.mergeIMGtoPDFbytes();
-    await this.loadPDF();
-    // //check if PDF upload
-    // if (this.file.type === "application/pdf") {
-    //   return await this.loadPDF(this.file, this.printer);
-    // } else if (
-    //   //cheeck if IMG upload
-    //   this.file.type === "image/jpeg" ||
-    //   this.file.type === "image/png"
-    // ) {
-    //   this.loadIMG();
-    // } else {
-    //   throw new Error("Please upload a PDF/JPG/PNG file only.");
-    // }
+    //get all bytes from pdf and img
+    const combinedBytes = await this.mergeAllBytes();
+    //render output PDF:
+    await this.loadPDF(combinedBytes);
   }
-  async mergePDFbytes() {
-    this.getUserSelection();
+  async mergeAllBytes() {
+    //get array of pdf buffers
+    const mergedPdfBytes = await this.mergeAllPDFtobytes();
+    //get array of img buffers
+    const mergedPDFandImgBytes = await this.mergeAllIMGtoPDFbytes(
+      mergedPdfBytes
+    );
+    //create the single merged file
+
+    return mergedPDFandImgBytes;
+  }
+  async mergeAllPDFtobytes() {
     //get all files as arraybuffers
     const pdfArrayBuffers = await Promise.all(
       this.pdfFiles.map((file) => file.arrayBuffer())
@@ -79,7 +84,6 @@ class DataProcessor {
     const mergedPdf = await PDFDocument.create();
     //get user dimensions
     const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
-
     // Loop through each PDF ArrayBuffer
     for (const pdfBytes of pdfArrayBuffers) {
       // Load the PDFDocument from the ArrayBuffer
@@ -128,34 +132,33 @@ class DataProcessor {
         //embeds existing pdf page into the new page
         newPage.drawPage(embeddedPage, {
           x: this.margin + (selectedWidth - scaledWidth) / 2,
-          y: this.margin + (selectedHeight - scaledHeight) / 2,
+          y: selectedHeight - scaledHeight - this.margin, //on top y-axis
+
           width: scaledWidth,
           height: scaledHeight,
         });
-        // Draw the embedded page on the new page
       }
     }
     // Save the merged PDFDocument to an ArrayBuffer
-    const mergedPdfBytes = await mergedPdf.save();
-    this.file = mergedPdfBytes;
+    const mergedPdfBytes = await mergedPdf.save({ addDefaultPage: false });
+    return mergedPdfBytes;
   }
-  async mergeIMGtoPDFbytes() {
-    this.getUserSelection();
+  async mergeAllIMGtoPDFbytes(mergedPdfBytes) {
     const imgArrayBuffers = await Promise.all(
       this.imgFiles.map((file) => file.arrayBuffer())
     );
-    // Create a new PDFDocument
-    const mergedImg = await PDFDocument.create();
+    // Load document with the merged PDF bytes
+    const pdfDoc = await PDFDocument.load(mergedPdfBytes);
     //get user dimensions
     const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
 
     // Loop through each image ArrayBuffer
     for (const imageBytes of imgArrayBuffers) {
       // Embed image into PDF
-      const image = await mergedImg.embedPng(imageBytes); // Change to embedJpg for JPEG images
+      const image = await pdfDoc.embedJpg(imageBytes); // Change to embedJpg for JPEG images
 
       // Add a new page with specified dimensions including margins
-      const page = mergedImg.addPage([
+      const page = pdfDoc.addPage([
         selectedWidth + this.margin * 2,
         selectedHeight + this.margin * 2,
       ]);
@@ -173,39 +176,36 @@ class DataProcessor {
       // Draw the image on the page, centered within the margins
       page.drawImage(image, {
         x: this.margin + (selectedWidth - scaledWidth) / 2,
-        y: selectedHeight - scaledHeight - this.margin,
+        y: selectedHeight - scaledHeight - this.margin, //on top y-axis
         width: scaledWidth,
         height: scaledHeight,
       });
     }
-
     // Save the PDF document to an ArrayBuffer
-    const mergedImgBytes = await mergedImg.save();
-    this.file = mergedImgBytes;
+    const mergedImgAndPDFBytes = await pdfDoc.save({ addDefaultPage: false });
+    return mergedImgAndPDFBytes;
   }
-  async imgToPDF() {}
   async downloadPDF() {
-    await this.mergePDFbytes();
-    // await this.mergeIMGtoPDFbytes();
-    const pdfbytes = this.file;
+    let pdfbytes;
+    if (this.userSelection.preset !== this.selections.presets.original) {
+      pdfbytes = await this.createPDFFromCanvases();
+    } else {
+      pdfbytes = await this.mergeAllBytes();
+    }
     const pdfBlob = new Blob([pdfbytes], { type: "application/pdf" });
     const pdfUrl = URL.createObjectURL(pdfBlob);
 
     const link = document.createElement("a");
     link.href = pdfUrl;
     console.log(link.href);
-    link.download = "lossless.pdf";
+    link.download = "PUPrinter.pdf";
     link.click();
     URL.revokeObjectURL(pdfUrl); // Clean up URL object
-    //lossless
-    // console.log(`my DATA`);
-    // console.log(mergedFileBytes);
-    // console.log(this.pdf);
   }
   //SAME JUST LOAD A SINGLE PDF FILE TO BE SAME CODE
-  async loadPDF() {
+  async loadPDF(combinedBytes) {
     //make pdf into bytes
-    this.pdfBytes = this.file;
+    this.pdfBytes = combinedBytes;
     const loadingTask = pdfjsLib.getDocument(this.pdfBytes);
     this.pdf = await loadingTask.promise;
     // Loading a PDF document
@@ -225,7 +225,7 @@ class DataProcessor {
       const page = await this.pdf.getPage(pageNum);
       //add args for papersize and coloroption
       const canvas = await this.renderPage(page, pageNum);
-      this.adjustContrast(canvas);
+      this.adjustColor(canvas);
     }
   }
   async loadIMG() {
@@ -341,18 +341,13 @@ class DataProcessor {
     const totalPixels = data.length / 4;
     const colorPercentage = (coloredPixels / totalPixels) * 100;
     console.log(`Color percentage: ${colorPercentage.toFixed(2)}%`);
-    return colorPercentage < 60 ? colorPercentageLow : colorPercentageHigh;
+    return colorPercentage < 1
+      ? 0
+      : colorPercentage <= 60
+      ? colorPercentageLow
+      : colorPercentageHigh;
   }
-  // async colorPhoto() {
-  //   //need to store to array all the original pageImageData
-  //   for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
-  //     const page = await this.pdf.getPage(pageNum);
-  //     const canvas = await this.renderPage(page, pageNum);
-  //     this.adjustContrast(canvas);
-  //   }
-
-  // }
-  adjustContrast(canvas) {
+  adjustColor(canvas) {
     const [contrast, brightness, saturation] = this.userSelection.preset;
     const imageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
     let data = imageData.data;
@@ -420,6 +415,7 @@ class DataProcessor {
     return p;
   }
   async generatePriceAmount(paperType, colorOption) {
+    this.userSelection.paperSize.keys();
     //get PDF data
     this.finalprice = 0;
     let priceMultiplier;
@@ -444,29 +440,26 @@ class DataProcessor {
     console.log(`document final price is: ${this.finalprice}`);
   }
   async generateFinalFile() {
-    //FOR SUBMISSION
+    let finalpdfbytes;
+    if (this.userSelection.preset !== this.selections.presets.original) {
+      finalpdfbytes = await this.createPDFFromCanvases();
+    } else {
+      finalpdfbytes = await this.mergeAllBytes();
+    }
+    return finalpdfbytes;
+  }
+  async createPDFFromCanvases() {
     const renderedCanvases = document.querySelectorAll(
       ".canvas_container canvas"
     );
-    const pdfDoc = await this.createPDFFromCanvases(renderedCanvases);
-    const pdfBytes = await pdfDoc.save({ addDefaultPage: false }); //this returns u8int that need for firebase url no need to convert to blob(just to download manually for now)
-    const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement("a");
-    link.href = pdfUrl;
-    console.log(link.href);
-    link.download = "generated.pdf";
-    link.click();
-  }
-  async createPDFFromCanvases(renderedCanvases) {
     const pdfDoc = await PDFDocument.create();
 
     for (const canvas of renderedCanvases) {
-      const imgData = canvas.toDataURL();
+      const imgData = canvas.toDataURL("image/jpeg"); //png automatic, add "image/jpeg"
       const imgBytes = Uint8Array.from(atob(imgData.split(",")[1]), (c) =>
         c.charCodeAt(0)
       );
-      const pngImage = await pdfDoc.embedPng(imgBytes);
+      const pngImage = await pdfDoc.embedJpg(imgBytes);
       const pngDims = pngImage.scale(1);
 
       // Add a blank page to the document
@@ -484,7 +477,8 @@ class DataProcessor {
         height: pngDims.height,
       });
     }
-    return pdfDoc;
+    const canvasBytes = await pdfDoc.save({ addDefaultPage: false });
+    return canvasBytes;
   }
 }
 

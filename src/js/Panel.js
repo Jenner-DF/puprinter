@@ -21,7 +21,7 @@ export default class Panel {
               <svg>
                 <use href="${icons}#icon-uploadFile"></use>
               </svg>
-              <p class="file_label">Upload a PDF/JPG/PNG file
+              <p class="file_label">Upload a PDF/JPG file
               </p>
             </label>
             <input
@@ -30,7 +30,7 @@ export default class Panel {
               id="file"
               class="printForm__file_upload" 
               multiple
-              accept="application/pdf, image/jpeg, image/png"
+              accept="application/pdf, image/jpeg"
             />
           </div>
         </div>
@@ -51,15 +51,9 @@ export default class Panel {
         <div class="printForm__section">
           <label for="select-colored">Color</label>
           <select id="select-colored" name="select_colored" required disabled>
-            <option value="original">Original +(₱${
-              printer.colorPercentageLow
-            } - ₱${printer.colorPercentageHigh})</option>
-            <option value="photo">Photo +(₱${printer.colorPercentageLow} - ₱${
-      printer.colorPercentageHigh
-    })</option>
-            <option value="docs">Docs +(₱${printer.colorPercentageLow} - ₱${
-      printer.colorPercentageHigh
-    })</option>
+            <option value="original">Original</option>
+            <option value="photo">Photo</option>
+            <option value="docs">Docs</option>
             <option value="grayscale">Grayscale</option>
           </select>
         </div>
@@ -99,9 +93,11 @@ export default class Panel {
   // <input type="number" id="saturation" placeholder="Enter saturation">
   async renderPrintForm() {
     //NOTE: crashing when user logs in because of spinner
-    this.renderSpinner(this._parentEl.children[0].children[2].children[1]);
+    // this.renderSpinner(this._parentEl.children[0].children[2].children[1]);
+    this.renderSpinner(this._parentEl);
     this.printer = await getPrinterConfig("printer1");
-    this._clear(this._parentEl.children[0].children[2].children[1]);
+    // this._clear(this._parentEl.children[0].children[2].children[1]);
+    this._clear(this._parentEl);
     const printFormMarkup = this.generatePrintFormMarkup(this.printer);
     this._parentEl.insertAdjacentHTML("beforeend", printFormMarkup);
     this.addPrintFormListener();
@@ -117,22 +113,32 @@ export default class Panel {
     this.errorEl = document.querySelector(".errormsg");
     const fileInput = this.printForm.querySelector("#file");
     this.fileLabel = this.printForm.querySelector(".file_label");
-    const fileLabel = document.querySelector(".file_label");
     const openDialog = this.printForm.querySelector(".openDialog");
     const downloadPDF = this.printForm.querySelector(".downloadPDF");
-    let mySelectedFile;
-    const printer = this.printer;
     //prevents submission of prinform form
     this.printForm.addEventListener("submit", (e) => e.preventDefault());
+    function disableUserInputButtons(state) {
+      console.log("changing state!!!");
+      selectColored.disabled = state;
+      selectPaper.disabled = state;
+      selectPayment.disabled = state;
+      selectOrientation.disabled = state;
+      selectCopies.disabled = state;
+      downloadPDF.disabled = state;
+      fileInput.disabled = state;
+      state
+        ? downloadPDF.classList.add("hidden")
+        : downloadPDF.classList.remove("hidden");
+    }
     fileInput.addEventListener("change", async (e) => {
       //need to be function() to get this
       try {
-        const files = e.target.files;
         document.querySelector(".canvas_container").innerHTML = "";
+
+        const files = e.target.files;
         downloadPDF.classList.add("hidden");
         this._clear(this.errorEl);
 
-        //25 MB×1024 KB/MB×1024 Bytes/KB=6,186,598  -> NETLIFY LIMIT 6MB
         if (files.length === 0) {
           selectColored.disabled = true;
           selectPaper.disabled = true;
@@ -140,7 +146,7 @@ export default class Panel {
           selectOrientation.disabled = true;
           selectCopies.disabled = true;
           downloadPDF.disabled = true;
-          fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+          this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
           return;
         }
         //prettier-ignore
@@ -150,54 +156,40 @@ export default class Panel {
           acc.push(file.name);
           return acc;
         }, []);
-        fileLabel.textContent = filenames.join(", ");
-        this.myFile = new DataProcessor(files, printer);
+        this.fileLabel.textContent = filenames.join(", ");
+        this.myFile = new DataProcessor(files, this.printer);
         //disables file input while loading
         fileInput.disabled = true;
+        disableUserInputButtons(true);
         await this.myFile.checkFile();
-        fileInput.disabled = false;
-        downloadPDF.classList.remove("hidden");
-        selectColored.disabled = false;
-        selectPaper.disabled = false;
-        selectPayment.disabled = false;
-        selectOrientation.disabled = false;
-        selectCopies.disabled = false;
-        downloadPDF.disabled = false;
+        disableUserInputButtons(false);
       } catch (e) {
-        selectColored.disabled = true;
-        selectPaper.disabled = true;
-        selectPayment.disabled = true;
-        selectOrientation.disabled = true;
-        selectCopies.disabled = true;
-        downloadPDF.disabled = true;
+        disableUserInputButtons(true);
         this.renderError(this.errorEl, e);
         fileInput.disabled = false;
-        console.log("TAENAmo");
-        console.error(e);
         console.log(e);
-        fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+        this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
-
-      // DataProcessor.loadPDF(selectedFile);
     });
     downloadPDF.addEventListener("click", async (e) => {
       try {
+        disableUserInputButtons(true);
         await this.myFile.downloadPDF();
+        disableUserInputButtons(false);
       } catch (e) {
-        selectColored.disabled = true;
-        selectPaper.disabled = true;
-        selectPayment.disabled = true;
-        selectOrientation.disabled = true;
-        selectCopies.disabled = true;
+        disableUserInputButtons(true);
+
         alert(e);
         console.log(e);
-        fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+        this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
     });
     selectPaper.addEventListener("change", async () => {
       console.log("changing paper!!!");
       document.querySelector(".canvas_container").innerHTML = "";
-      await myFile.checkFile(mySelectedFile);
+      disableUserInputButtons(true);
+      await this.myFile.checkFile();
+      disableUserInputButtons(false);
     });
     selectColored.addEventListener(
       "click",
@@ -222,8 +214,30 @@ export default class Panel {
     selectColored.addEventListener("change", async () => {
       console.log("changing color!!!");
       document.querySelector(".canvas_container").innerHTML = "";
-
-      await myFile.checkFile(mySelectedFile);
+      disableUserInputButtons(true);
+      await this.myFile.checkFile();
+      disableUserInputButtons(false);
+    });
+    selectCopies.addEventListener("change", async () => {
+      try {
+        console.log("changing copies!!!");
+        document.querySelector(".canvas_container").innerHTML = "";
+        disableUserInputButtons(true);
+        await this.myFile.checkFile();
+        disableUserInputButtons(false);
+      } catch (e) {
+        disableUserInputButtons(true);
+        fileInput.disabled = false;
+        this.renderError(this.errorEl, e);
+        this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+      }
+    });
+    selectOrientation.addEventListener("change", async () => {
+      console.log("changing orientation!!!");
+      document.querySelector(".canvas_container").innerHTML = "";
+      disableUserInputButtons(true);
+      await this.myFile.checkFile();
+      disableUserInputButtons(false);
     });
     // open modal after clicking submit
     openDialog.addEventListener("click", async () => {
@@ -238,7 +252,6 @@ export default class Panel {
           throw new Error("Please ensure all form fields are completed");
         this.errorEl.innerHTML = "";
         this.paymentOption = this.printForm.select_payment.value;
-        await this.myFile.generateFinalFile();
         await this.renderPrintFormDialog();
       } catch (e) {
         this.renderError(this.errorEl, e);
@@ -319,7 +332,7 @@ export default class Panel {
     this._clear(this.modal);
     this.modal.insertAdjacentHTML("afterbegin", gettingPincodeMarkup);
     const getPincodeForm = await PrintForm.createInstance(
-      this.printForm.file.files[0],
+      await this.myFile.generateFinalFile(),
       this.printForm.select_colored.value,
       this.printForm.select_paper.value,
       this.printForm.select_payment.value,
@@ -344,6 +357,8 @@ export default class Panel {
     //AFTER SUBMITTING PRINT FORM
     this.printForm.reset();
     this.fileLabel.textContent = "Upload a PDF file";
+    document.querySelector(".canvas_container").innerHTML = "";
+
     //returns markup of pincode
     function formatPincode(pincode) {
       console.log(pincode);

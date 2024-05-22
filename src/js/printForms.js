@@ -8,10 +8,10 @@ import { updateDoc } from "firebase/firestore";
 //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
 
 export default class PrintForm {
-  constructor(file, colorOption, paperType, paymentOption, price, page) {
+  constructor(fileBytes, colorOption, paperType, paymentOption, price, page) {
     // this.printerUID = "printer1";
     this.userID = auth?.currentUser?.uid ? auth.currentUser.uid : null;
-    this.file = file;
+    this.fileBytes = fileBytes;
     this.colorOption = colorOption;
     this.paperType = paperType;
     this.paymentOption = paymentOption;
@@ -20,7 +20,7 @@ export default class PrintForm {
     console.log(
       this.userID,
       this.colorOption,
-      this.file,
+      this.fileBytes,
       this.paperType,
       this.price,
       this.page
@@ -55,7 +55,7 @@ export default class PrintForm {
       await runTransaction(db, async (transaction) => {
         transaction.set(this._docRef, {
           userID: this.userID,
-          filename: this.file.name,
+          filename: "PUPrinter",
           fileURL: this.fileurl,
           paperType: this.paperType,
           page: this.page,
@@ -68,7 +68,7 @@ export default class PrintForm {
         });
       });
       this.paymentOption === "machine" ? null : await this.updateUserWallet();
-
+      // this is not a transaction, can error if if 2 files uploading at same time
       // await addDoc(this._docRef, {
       //   userID: auth.currentUser.uid,
       //   filename: this.file.name,
@@ -93,10 +93,12 @@ export default class PrintForm {
   }
   async _generateFileUrl() {
     const storageRef = ref(storage, this.pincode); //path
-    const fileRef = ref(storageRef, this.file.name);
+    const fileRef = ref(storageRef, "PUPrinter"); //name of file inside the folder
     // 'file' comes from the Blob(no filename) or File API
     try {
-      const snapshot = await uploadBytes(fileRef, this.file);
+      const snapshot = await uploadBytes(fileRef, this.fileBytes, {
+        contentType: "application/pdf",
+      });
       const downloadURL = await getDownloadURL(snapshot.ref);
       return downloadURL;
     } catch (e) {
@@ -129,27 +131,4 @@ export default class PrintForm {
       throw new Error("Failed to assign a unique PIN after several attempts.");
     }
   }
-  // static async _generatePriceAmount(file, paper, color) {
-  //   const printer = await this.initPrintConfig("printer1");
-  //   // short = ₱2 || long = ₱3 &&
-  //   // colorOption = +₱3 || grayscale = +₱0
-  //   const paperType = paper === "short" ? 2 : 3;
-  //   const colorOption = color === "colored" ? 3 : 0;
-  //   this.pricemultiplier = paperType + colorOption;
-  //   let url;
-  //   let existingPdfBytes;
-  //   // if (!local) {
-  //   //   //NOTE:Cannot bypass CORS, need to use gsutil and create CORS config file
-  //   //   url = `https://justcors.com/tl_20c7f58/${file}`;
-  //   //   existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
-  //   // } else {
-  //   //   existingPdfBytes = await file.arrayBuffer();
-  //   // }
-  //   existingPdfBytes = await file.arrayBuffer();
-  //   //get PDF data
-  //   const pdfDoc = await PDFDocument.load(existingPdfBytes);
-  //   const totalpage = pdfDoc.getPageCount();
-  //   //get pdf price
-  //   return totalpage * this.pricemultiplier;
-  // }
 }
