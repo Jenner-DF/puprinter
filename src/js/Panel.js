@@ -15,33 +15,33 @@ export default class Panel {
         <table>
         <tr>
             <th>Color</th>
-            <th>Short (₱2)</th>
-            <th>Long (₱4)</th>
-            <th>A4 (₱6)</th>
+            <th>Short (₱${printer.priceShort})</th>
+            <th>Long (₱${printer.priceLong})</th>
+            <th>A4  (₱${printer.priceA4})</th>
         </tr>
         <tr>
             <td>Original</td>
-            <td>2</td>
-            <td>4</td>
-            <td>6</td>
+            <td>(₱${printer.priceShort})</td>
+            <td>(₱${printer.priceLong})</td>
+            <td>(₱${printer.priceA4})</td>
         </tr>
         <tr>
             <td>Photo</td>
-            <td>2</td>
-            <td>4</td>
-            <td>6</td>
+            <td>(₱${printer.priceShort})</td>
+            <td>(₱${printer.priceLong})</td>
+            <td>(₱${printer.priceA4})</td>
         </tr>
         <tr>
             <td>Docs</td>
-            <td>2</td>
-            <td>4</td>
-            <td>6</td>
+            <td>(₱${printer.priceShort})</td>
+            <td>(₱${printer.priceLong})</td>
+            <td>(₱${printer.priceA4})</td>
         </tr>
         <tr>
             <td>Grayscale</td>
-            <td>2</td>
-            <td>4</td>
-            <td>6</td>
+            <td>(₱${printer.priceShort})</td>
+            <td>(₱${printer.priceLong})</td>
+            <td>(₱${printer.priceA4})</td>
         </tr>
         </table>
     </div>
