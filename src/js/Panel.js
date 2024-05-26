@@ -21,27 +21,27 @@ export default class Panel {
         </tr>
         <tr>
             <td>Original</td>
-            <td>${printer.priceShort}</td>
-            <td>${printer.priceLong}</td>
-            <td>${printer.priceA4}</td>
+            <td>${printer.priceShort})</td>
+            <td>${printer.priceLong})</td>
+            <td>${printer.priceA4})</td>
         </tr>
         <tr>
             <td>Photo</td>
-            <t${printer.priceShort}</td>
-            <t${printer.priceLong}</td>
-            <t${printer.priceA4}</td>
+            <td>${printer.priceShort})</td>
+            <td>${printer.priceLong})</td>
+            <td>${printer.priceA4})</td>
         </tr>
         <tr>
             <td>Docs</td>
-            <t${printer.priceShort}</td>
-            <t${printer.priceLong}</td>
-            <t${printer.priceA4}</td>
+            <td>${printer.priceShort})</td>
+            <td>${printer.priceLong})</td>
+            <td>${printer.priceA4})</td>
         </tr>
         <tr>
             <td>Grayscale</td>
-            <t${printer.priceShort}</td>
-            <t${printer.priceLong}</td>
-            <t${printer.priceA4}</td>
+            <td>${printer.priceShort})</td>
+            <td>${printer.priceLong})</td>
+            <td>${printer.priceA4})</td>
         </tr>
         </table>
     </div>
