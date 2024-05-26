@@ -1,5 +1,5 @@
 //prettier-ignore
-import { auth, db, getUserProfile, signOut, collection, onSnapshot, orderBy, query, where, } from "./firebaseConfig"
+import { auth, db, getUserProfile, signOut, collection, onSnapshot, orderBy, query, where, getDocs, } from "./firebaseConfig"
 import logo from "../img/Pay-U-Print-Admin-logo.png";
 import userPanel from "./userPanel";
 class adminPanel extends userPanel {

@@ -2,10 +2,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  max-width: 50vw;
+  max-width: 1200px;
   margin: 2rem auto;
   border-radius: 15px;
-  box-shadow: 0 3px 2px $box-shadow-color;
+  // box-shadow: 0 3px 2px $box-shadow-color;
 }
 .header__login {
   &_logo {

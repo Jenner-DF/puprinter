@@ -9,6 +9,45 @@ export default class Panel {
   generatePrintFormMarkup(printer) {
     // console.log(user); NOTE: make an object and set it to ${} so without signing in is ok! or divide wallet section
     return `
+    <div class="priceTable">
+    <h2>Price Guide (per page): </h2>
+    <div> 
+        <table>
+        <tr>
+            <th>Color</th>
+            <th>Short (₱2)</th>
+            <th>Long (₱4)</th>
+            <th>A4 (₱6)</th>
+        </tr>
+        <tr>
+            <td>Original</td>
+            <td>2</td>
+            <td>4</td>
+            <td>6</td>
+        </tr>
+        <tr>
+            <td>Photo</td>
+            <td>2</td>
+            <td>4</td>
+            <td>6</td>
+        </tr>
+        <tr>
+            <td>Docs</td>
+            <td>2</td>
+            <td>4</td>
+            <td>6</td>
+        </tr>
+        <tr>
+            <td>Grayscale</td>
+            <td>2</td>
+            <td>4</td>
+            <td>6</td>
+        </tr>
+        </table>
+    </div>
+    
+    <p><strong>Note:</strong> For colored prints, if the detected color percentage is 60% or below, the additional cost is ₱5. If the detected color percentage is above 60%, the additional cost is ₱10.</p>
+    </div>
     <div class="section print__section_printForm">
       <!-- PRINTFORM -->
       <div class="errormsg"></div>
@@ -82,7 +121,12 @@ export default class Panel {
         </div>
         <div class="submit"><button type="button" class="openDialog">Submit</button></div>
         <div class="download"><button disabled type="button" class="downloadPDF hidden" >Download PDF</button></div>
-      </form> 
+      </form>
+      </div> 
+      <div>
+        <h1 style="text-align:center;padding: 10px 0">Output PDF:</h1>
+        <div class="canvas_container"></div>
+      </div>
         <!-- DIALOG -->
         <dialog class="modal">
         </dialog>
@@ -105,53 +149,23 @@ export default class Panel {
   addPrintFormListener() {
     this.modal = document.querySelector(".modal");
     this.printForm = document.querySelector(".printForm");
-    const selectColored = document.getElementById("select-colored");
-    const selectPaper = document.getElementById("select-paper");
-    const selectPayment = document.getElementById("select-payment");
-    const selectCopies = document.getElementById("select-copies");
-    const selectOrientation = document.getElementById("select-orientation");
+    this.selectColored = document.getElementById("select-colored");
+    this.selectPaper = document.getElementById("select-paper");
+    this.selectPayment = document.getElementById("select-payment");
+    this.selectCopies = document.getElementById("select-copies");
+    this.selectOrientation = document.getElementById("select-orientation");
     this.errorEl = document.querySelector(".errormsg");
-    const fileInput = this.printForm.querySelector("#file");
+    this.fileInput = this.printForm.querySelector("#file");
     this.fileLabel = this.printForm.querySelector(".file_label");
     const openDialog = this.printForm.querySelector(".openDialog");
-    const downloadPDF = this.printForm.querySelector(".downloadPDF");
+    this.downloadPDF = this.printForm.querySelector(".downloadPDF");
     //prevents submission of prinform form
     this.printForm.addEventListener("submit", (e) => e.preventDefault());
-    function disableUserInputButtons(state) {
-      console.log("changing state!!!");
-      selectColored.disabled = state;
-      selectPaper.disabled = state;
-      selectPayment.disabled = state;
-      selectOrientation.disabled = state;
-      selectCopies.disabled = state;
-      downloadPDF.disabled = state;
-      fileInput.disabled = state;
-      state
-        ? downloadPDF.classList.add("hidden")
-        : downloadPDF.classList.remove("hidden");
-    }
-    fileInput.addEventListener("change", async (e) => {
-      //need to be function() to get this
+    this.fileInput.addEventListener("change", async (e) => {
       try {
-        document.querySelector(".canvas_container").innerHTML = "";
-
         const files = e.target.files;
-        downloadPDF.classList.add("hidden");
         this._clear(this.errorEl);
-
-        if (files.length === 0) {
-          selectColored.disabled = true;
-          selectPaper.disabled = true;
-          selectPayment.disabled = true;
-          selectOrientation.disabled = true;
-          selectCopies.disabled = true;
-          downloadPDF.disabled = true;
-          this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
-          return;
-        }
         //prettier-ignore
-        if (files.length > 5) throw new Error("Please upload up to 5 files only.");
-
         const filenames = Array.from(files).reduce((acc, file) => {
           acc.push(file.name);
           return acc;
@@ -159,39 +173,36 @@ export default class Panel {
         this.fileLabel.textContent = filenames.join(", ");
         this.myFile = new DataProcessor(files, this.printer);
         //disables file input while loading
-        fileInput.disabled = true;
-        disableUserInputButtons(true);
+        this.disableUserInputButtons(true);
         await this.myFile.checkFile();
-        disableUserInputButtons(false);
+        this.disableUserInputButtons(false);
       } catch (e) {
-        disableUserInputButtons(true);
+        this.disableUserInputButtons(true);
         this.renderError(this.errorEl, e);
-        fileInput.disabled = false;
+        this.fileInput.disabled = false;
         console.log(e);
         this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
     });
-    downloadPDF.addEventListener("click", async (e) => {
+    this.downloadPDF.addEventListener("click", async () => {
       try {
-        disableUserInputButtons(true);
         await this.myFile.downloadPDF();
-        disableUserInputButtons(false);
       } catch (e) {
-        disableUserInputButtons(true);
-
         alert(e);
         console.log(e);
         this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
     });
-    selectPaper.addEventListener("change", async () => {
-      console.log("changing paper!!!");
-      document.querySelector(".canvas_container").innerHTML = "";
-      disableUserInputButtons(true);
-      await this.myFile.checkFile();
-      disableUserInputButtons(false);
+    this.selectPaper.addEventListener("change", async () => {
+      try {
+        this.disableUserInputButtons(true);
+        await this.myFile.checkFile();
+        this.disableUserInputButtons(false);
+      } catch (e) {
+        this.errorEl(e);
+      }
     });
-    selectColored.addEventListener(
+    this.selectColored.addEventListener(
       "click",
       () => {
         const selectColoredMarkup = `
@@ -199,7 +210,7 @@ export default class Panel {
         <p>WARNING:</p>
       </div>
       <div class="modal__section modal__img">
-        <p class="modal__img_text_long">Changing color results to lower quality for PDFs</p>
+        <p class="modal__img_text_long">Changing color results to lower quality for PDFs (excluding grayscale)</p>
       </div>
       <div class="modal__section modal__btns">
         <button class="btn closeModal">Continue</button>
@@ -211,47 +222,41 @@ export default class Panel {
       },
       { once: true }
     );
-    selectColored.addEventListener("change", async () => {
-      console.log("changing color!!!");
-      document.querySelector(".canvas_container").innerHTML = "";
-      disableUserInputButtons(true);
-      await this.myFile.checkFile();
-      disableUserInputButtons(false);
+    this.selectColored.addEventListener("change", async () => {
+      try {
+        this.disableUserInputButtons(true);
+        await this.myFile.checkFile();
+        this.disableUserInputButtons(false);
+      } catch (e) {
+        this.errorEl(e);
+      }
     });
-    selectCopies.addEventListener("change", async () => {
+    this.selectCopies.addEventListener("change", async () => {
       try {
         console.log("changing copies!!!");
-        document.querySelector(".canvas_container").innerHTML = "";
-        disableUserInputButtons(true);
+        this.disableUserInputButtons(true);
         await this.myFile.checkFile();
-        disableUserInputButtons(false);
+        this.disableUserInputButtons(false);
       } catch (e) {
-        document.querySelector(".canvas_container").innerHTML = "";
-        selectCopies.value = 1;
-        disableUserInputButtons(true);
-        fileInput.disabled = false;
+        this.selectCopies.value = 1;
+        this.selectCopies.disabled = false;
+        this.fileInput.disabled = false;
         this.renderError(this.errorEl, e);
         this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
       }
     });
-    selectOrientation.addEventListener("change", async () => {
-      console.log("changing orientation!!!");
-      document.querySelector(".canvas_container").innerHTML = "";
-      disableUserInputButtons(true);
-      await this.myFile.checkFile();
-      disableUserInputButtons(false);
+    this.selectOrientation.addEventListener("change", async () => {
+      try {
+        this.disableUserInputButtons(true);
+        await this.myFile.checkFile();
+        this.disableUserInputButtons(false);
+      } catch (e) {
+        this.errorEl(e);
+      }
     });
     // open modal after clicking submit
     openDialog.addEventListener("click", async () => {
       try {
-        if (!this.printForm.file.files[0])
-          throw new Error("No files uploaded yet!");
-        if (
-          this.printForm.select_colored.value === "" ||
-          this.printForm.select_paper.value === "" ||
-          this.printForm.select_payment.value === ""
-        )
-          throw new Error("Please ensure all form fields are completed");
         this.errorEl.innerHTML = "";
         this.paymentOption = this.printForm.select_payment.value;
         await this.renderPrintFormDialog();
@@ -261,19 +266,27 @@ export default class Panel {
     });
   }
   async renderPrintFormDialog() {
-    const modImg = document.querySelector(".modal__img");
-    //show Price Dialog
-    this._clear(this.modal);
-    this.modal.showModal();
-    this.renderSpinner(this.modal);
-    await this.myFile.generatePriceAmount(
-      this.printForm.select_paper.value,
-      this.printForm.select_colored.value
-    );
-    this.showPrintFormPriceDialog(
-      this.myFile.finalprice,
-      this.myFile.finalpage
-    );
+    try {
+      //show Price Dialog
+      this._clear(this.modal);
+      this.modal.showModal();
+      this.renderSpinner(this.modal);
+      this.disableUserInputButtons(true);
+      await this.myFile.checkFile();
+      this.disableUserInputButtons(false);
+      await this.myFile.generatePriceAmount(
+        this.printForm.select_paper.value,
+        this.printForm.select_colored.value
+      );
+      this.showPrintFormPriceDialog(
+        this.myFile.finalprice,
+        this.myFile.finalpage
+      );
+    } catch {
+      this.renderError(this.errorEl, "No files uploaded yet!");
+      this.fileInput.disabled = false;
+      this.modal.close();
+    }
   }
   showPrintFormPriceDialog() {
     const priceDialogMarkup = `
@@ -369,6 +382,19 @@ export default class Panel {
         .map((digit) => `<p class="code">${digit}</p>`)
         .join("");
     }
+  }
+
+  disableUserInputButtons(state) {
+    this.selectColored.disabled = state;
+    this.selectPaper.disabled = state;
+    this.selectPayment.disabled = state;
+    this.selectOrientation.disabled = state;
+    this.selectCopies.disabled = state;
+    this.downloadPDF.disabled = state;
+    this.fileInput.disabled = state;
+    state
+      ? this.downloadPDF.classList.add("hidden")
+      : this.downloadPDF.classList.remove("hidden");
   }
   modalsubmitlistener(btnSubmit, handler) {
     btnSubmit.addEventListener("click", async () => {

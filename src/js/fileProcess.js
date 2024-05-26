@@ -2,6 +2,7 @@ import { PDFDocument, rgb, degrees } from "pdf-lib";
 import { getPrinterConfig } from "./firebaseConfig";
 PDFDocument;
 import * as pdfjsLib from "pdfjs-dist/build/pdf";
+import Panel from "./Panel";
 // import * as pdfjsLib from "pdfjs-dist/legacy/bu ild/pdf";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -11,6 +12,7 @@ class DataProcessor {
   constructor(files, printer) {
     this.originalFiles = Array.from(files);
     this.printer = printer;
+    this.maxFiles = 5;
     this.finalprice = 0;
     this.finalpage = 0;
     this.margin = 5; // size in pixels
@@ -37,14 +39,24 @@ class DataProcessor {
   }
 
   async checkFile() {
+    //reset canvas;
+    document.querySelector(".canvas_container").innerHTML = "";
     //get user selection
     this.getUserSelection();
-    this.userFiles = [];
-
+    this.userFiles = []; //init user files in array
+    //check if there is a file
+    console.log(this.originalFiles);
+    if (this.originalFiles.length > this.maxFiles)
+      throw new Error("Please upload up to 5 files only.");
+    if (this.originalFiles.length === 0) {
+      throw new Error("No files uploaded yet!");
+    }
     //make new array with number of copies included
     for (let i = 0; i < this.userSelection.copies; i++) {
       this.userFiles = [...this.userFiles, ...this.originalFiles];
     }
+
+    //checks filesize of user's files
     const totalSize = this.userFiles.reduce((acc, file) => acc + file.size, 0);
     if (totalSize > this.printer.uploadLimitBytes) {
       throw new Error(
@@ -415,7 +427,6 @@ class DataProcessor {
     return p;
   }
   async generatePriceAmount(paperType, colorOption) {
-    this.userSelection.paperSize.keys();
     //get PDF data
     this.finalprice = 0;
     let priceMultiplier;
