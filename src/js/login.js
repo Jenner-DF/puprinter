@@ -23,6 +23,7 @@ class loginPanel extends Panel {
   </div>
   <div class="form__textheader_error error_signIn"></div>
   <button class="btn form__btn_swapform btn__main printnow"><h3>Print Now</h3></button>
+  <a href="#" id='admin'>Admin</a>
 
     <!-- PRINTFORM -->
     <!--
@@ -53,16 +54,16 @@ class loginPanel extends Panel {
   }
   addLoginListener() {
     const printnow = document.querySelector(".printnow");
-    // const login = document.querySelector(".login");
-    // const textheader_error_login = document.querySelector(".error_signIn");
-    // login.addEventListener("click", async (e) => {
-    //   try {
-    //     await signIn();
-    //   } catch (e) {
-    //     this._clear(textheader_error_login);
-    //     this.renderError(textheader_error_login, e);
-    //   }
-    // });
+    const login = document.querySelector("#admin");
+    const textheader_error_login = document.querySelector(".error_signIn");
+    login.addEventListener("click", async (e) => {
+      try {
+        await signIn();
+      } catch (e) {
+        this._clear(textheader_error_login);
+        this.renderError(textheader_error_login, e);
+      }
+    });
     printnow.addEventListener("click", (e) => {
       this.renderPrintForm();
       printnow.style.display = "none";

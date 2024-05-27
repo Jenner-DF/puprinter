@@ -44,7 +44,7 @@ try {
       console.log(admin.isAdmin);
       admin.isAdmin
         ? new adminPanel(user.uid, admin.isAdmin)
-        : new userPanel(user.uid, admin.isAdmin);
+        : loginPanel.render();
     } else {
       loginPanel.render();
     }
@@ -55,3 +55,4 @@ try {
 }
 
 //NOTE: APP;
+// new userPanel(user.uid, admin.isAdmin);
