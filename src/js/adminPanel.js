@@ -48,6 +48,7 @@ class adminPanel extends userPanel {
     <canvas id="totalRevenue"></canvas>
     <canvas id="maxPrintPage"></canvas>
     <canvas id="paperStock"></canvas>
+    <canvas id="userSubmitToPrinted"></canvas>
     `;
   }
   // fetchMonthDisplayData(month, year) {
@@ -72,6 +73,27 @@ class adminPanel extends userPanel {
   //   // Return all days in reverse order (past to present)
   //   return allDays;
   // }
+  fetchUserSubmitFormToPrinted() {
+    const totalSubmission = this.printFormDocs
+      .filter((doc) => doc.status === "Unpaid")
+      .reduce((acc, doc) => {
+        // Extract date from timestamp
+        const date = this.formatTimeStamp(doc.timestamp);
+        // Sum prices for each date
+        acc[date] = (acc[date] || 0) + doc.price;
+        return acc;
+      }, {});
+    const totalPrinted = this.printFormDocs
+      .filter((doc) => doc.status === "paid")
+      .reduce((acc, doc) => {
+        // Extract date from timestamp
+        const date = this.formatTimeStamp(doc.timestamp);
+        // Sum prices for each date
+        acc[date] = (acc[date] || 0) + doc.price;
+        return acc;
+      }, {});
+    return [totalSubmission, totalPrinted];
+  }
   fetchPerDayTotalRevenue(reqData) {
     const totalRevenuePerDay = this.printFormDocs
       .filter((doc) => doc.status === "paid")

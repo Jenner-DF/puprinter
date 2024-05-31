@@ -45,7 +45,6 @@ class DataProcessor {
     this.getUserSelection();
     this.userFiles = []; //init user files in array
     //check if there is a file
-    console.log(this.originalFiles);
     if (this.originalFiles.length > this.maxFiles)
       throw new Error("Please upload up to 5 files only.");
     if (this.originalFiles.length === 0) {
