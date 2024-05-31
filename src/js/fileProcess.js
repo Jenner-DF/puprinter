@@ -435,9 +435,11 @@ class DataProcessor {
     if (colorOption === "grayscale")
       this.finalprice = priceMultiplier * this.finalpage;
     else {
+      //remove current canvas
+      document.querySelector(".canvas_container").innerHTML = "";
       for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
         const page = await this.pdf.getPage(pageNum);
-        const canvas = await this.renderPage(page);
+        const canvas = await this.renderPage(page, pageNum);
         const priceColoredByPercent = await this.analyzeColors(
           canvas,
           this.printer.colorPercentageLow,
