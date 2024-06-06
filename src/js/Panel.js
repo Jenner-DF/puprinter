@@ -12,38 +12,49 @@ export default class Panel {
     <div class="priceTable">
     <h2>Price Guide (per page): </h2>
     <div> 
-        <table>
-        <tr>
-            <th>Color</th>
-            <th>Short (₱${printer.priceShort})</th>
-            <th>Long (₱${printer.priceLong})</th>
-            <th>A4  (₱${printer.priceA4})</th>
-        </tr>
-        <tr>
-            <td>Original</td>
-            <td>${printer.priceShort}</td>
-            <td>${printer.priceLong}</td>
-            <td>${printer.priceA4}</td>
-        </tr>
-        <tr>
-            <td>Photo</td>
-            <td>${printer.priceShort}</td>
-            <td>${printer.priceLong}</td>
-            <td>${printer.priceA4}</td>
-        </tr>
-        <tr>
-            <td>Docs</td>
-            <td>${printer.priceShort}</td>
-            <td>${printer.priceLong}</td>
-            <td>${printer.priceA4}</td>
-        </tr>
-        <tr>
-            <td>Grayscale</td>
-            <td>${printer.priceShort}</td>
-            <td>${printer.priceLong}</td>
-            <td>${printer.priceA4}</td>
-        </tr>
-        </table>
+    <table border="1">
+    <tr>
+      <td></td>
+      <th rowspan="2">BASE PRICE</th>
+      <th colspan="2">BLACK</th>
+      <th colspan="3">COLOR</th>
+    </tr>
+    <tr>
+      <td></td>
+      <td>&gt;65%</td>
+      <td>&gt;75%</td>
+      <td>&gt;25%</td>
+      <td>&gt;50%</td>
+      <td>&gt;75%</td>
+    </tr>
+    <tr>
+      <th>SHORT</th>
+      <td>2</td>
+      <td>+1</td>
+      <td>+2</td>
+      <td>+6</td>
+      <td>+8</td>
+      <td>+13</td>
+    </tr>
+    <tr>
+      <th>A4</th>
+      <td>2</td>
+      <td>+1</td>
+      <td>+2</td>
+      <td>+6</td>
+      <td>+8</td>
+      <td>+13</td>
+    </tr>
+    <tr>
+      <th>LONG</th>
+      <td>3</td>
+      <td>+1</td>
+      <td>+2</td>
+      <td>+7</td>
+      <td>+12</td>
+      <td>+17</td>
+    </tr>
+  </table>
     </div>
     
     <p><strong>Note:</strong> For colored prints, if the detected color percentage is 60% or below, the additional cost is ₱${

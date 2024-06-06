@@ -17,6 +17,7 @@ class DataProcessor {
     this.finalprice = 1;
     this.readyForSubmission = false;
     this.margin = 5; // size in pixels
+    this.thresholds = JSON.parse(this.printer.thresholds);
     this.selections = {
       paperSizes: {
         short: [612.0, 792.0],
@@ -341,7 +342,7 @@ class DataProcessor {
     return canvas;
   }
 
-  async analyzeColors(canvas, colorOption, priceMultiplier) {
+  async analyzeColors(canvas, colorOption, paperType) {
     console.log(`tangina mo analyze to!`);
     const ctx = canvas.getContext("2d");
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -366,21 +367,46 @@ class DataProcessor {
     const totalPixels = data.length / 4;
     const colorPercentage = (coloredPixels / totalPixels) * 100;
     const whitePercentage = (whitePixels / totalPixels) * 100;
+    console.log("whitespace:");
+    console.log(whitePercentage);
+    console.log("color:");
+    console.log(colorPercentage);
 
-    console.log(`Color percentage: ${colorPercentage.toFixed(2)}%`);
-    console.log(`White percentage: ${whitePercentage.toFixed(2)}%`);
+    //NOTE:gpt
+    let additionalPrice = 0;
+
     if (colorOption === "grayscale") {
-      if (whitePercentage > 75) return 0; // 25% black = no added tax
-      if (whitePercentage < 75) return 1; // up to 75% is black
-      if (whitePercentage < 40) return 2; // passed the 40% threshold
-      return 0;
+      additionalPrice = this.getGrayscaleAdditionalPrice(whitePercentage);
+    } else {
+      additionalPrice = this.getColorAdditionalPrice(
+        colorPercentage,
+        paperType
+      );
     }
-    if (colorPercentage < 25) return priceMultiplier; //change tobase price return
-    if (colorPercentage > 85) return 18;
-    if (colorPercentage > 75) return 13;
-    if (colorPercentage > 50) return 8;
-    if (colorPercentage > 25) return 6;
-    return 18;
+    console.log(additionalPrice);
+    return additionalPrice;
+  }
+  // Helper function to get additional price for grayscale
+  getGrayscaleAdditionalPrice(whitePercentage) {
+    if (whitePercentage > 75) return 0; // 25% black = no added tax
+    for (const level of this.thresholds.grayscale) {
+      if (whitePercentage >= level.maxPercentage) {
+        return level.additionalPrice;
+      }
+    }
+    return 0; // Default to 0 if no threshold matches
+  }
+
+  // Helper function to get additional price for color
+  getColorAdditionalPrice(colorPercentage, paperType) {
+    for (const level of this.thresholds.color) {
+      if (colorPercentage >= level.maxPercentage) {
+        return paperType === "long" && level.longPrice
+          ? level.longPrice
+          : level.additionalPrice;
+      }
+    }
+    return 0; // Default to 0 if no threshold matches
   }
   adjustColor(canvas) {
     const [contrast, brightness, saturation] = this.userSelection.preset;
@@ -466,7 +492,7 @@ class DataProcessor {
       const priceColoredByPercent = await this.analyzeColors(
         canvas,
         selectColored.value,
-        priceMultiplier
+        paperType.value
       );
       console.log(`my price:!`);
       console.log(priceMultiplier);
