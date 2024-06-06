@@ -46,7 +46,11 @@ export default class Panel {
         </table>
     </div>
     
-    <p><strong>Note:</strong> For colored prints, if the detected color percentage is 60% or below, the additional cost is ₱5. If the detected color percentage is above 60%, the additional cost is ₱10.</p>
+    <p><strong>Note:</strong> For colored prints, if the detected color percentage is 60% or below, the additional cost is ₱${
+      printer.colorPercentageLowPrice
+    }. If the detected color percentage is above 60%, the additional cost is ₱${
+      printer.colorPercentageHighPrice
+    }.</p>
     </div>
     <div class="section print__section_printForm">
       <!-- PRINTFORM -->
@@ -272,12 +276,8 @@ export default class Panel {
       this.modal.showModal();
       this.renderSpinner(this.modal);
       this.disableUserInputButtons(true);
-      await this.myFile.checkFile();
+      await this.myFile.checkFile(true);
       this.disableUserInputButtons(false);
-      await this.myFile.generatePriceAmount(
-        this.printForm.select_paper.value,
-        this.printForm.select_colored.value
-      );
       this.showPrintFormPriceDialog(
         this.myFile.finalprice,
         this.myFile.finalpage

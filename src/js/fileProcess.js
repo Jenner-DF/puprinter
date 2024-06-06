@@ -13,8 +13,9 @@ class DataProcessor {
     this.originalFiles = Array.from(files);
     this.printer = printer;
     this.maxFiles = 5;
-    this.finalprice = 0;
     this.finalpage = 0;
+    this.finalprice = 1;
+    this.readyForSubmission = false;
     this.margin = 5; // size in pixels
     this.selections = {
       paperSizes: {
@@ -38,7 +39,8 @@ class DataProcessor {
     };
   }
 
-  async checkFile() {
+  async checkFile(readyForSubmission = false) {
+    this.readyForSubmission = readyForSubmission;
     //reset canvas;
     document.querySelector(".canvas_container").innerHTML = "";
     //get user selection
@@ -231,17 +233,22 @@ class DataProcessor {
     //get user selection from ui
     this.getUserSelection();
     console.log(`my user options: ${this.userSelection}`);
+    console.log(this.userSelection);
+    console.log(this.readyForSubmission);
     //rendering each page
+    this.finalprice = 0;
     for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
       const page = await this.pdf.getPage(pageNum);
       //add args for papersize and coloroption
       const canvas = await this.renderPage(page, pageNum);
       this.adjustColor(canvas);
+      if (this.readyForSubmission) {
+        console.log("ako ay ready for submisison!");
+        this.finalprice += await this.generatePriceAmount(canvas);
+      }
     }
-  }
-  async loadIMG() {
-    //make the image pdf first then can use loadPDF()
-    console.log(`this is my IMAGE!`);
+    console.log("magkano?!");
+    console.log(this.finalprice);
   }
 
   getUserSelection() {
@@ -297,8 +304,8 @@ class DataProcessor {
     const canvas = document.createElement("canvas");
     this.ctx = canvas.getContext("2d", { willReadFrequently: true });
     // Adjust the canvas width and height to include the this.margins
-    canvas.width = selectedWidth + this.margin * 2;
-    canvas.height = selectedHeight + this.margin * 2;
+    canvas.width = selectedWidth;
+    canvas.height = selectedHeight;
     document.querySelector(".canvas_container").appendChild(canvas);
     // Calculate the scale to fit the PDF page into Letter size
     const scaleX = (selectedWidth - this.margin * 2) / viewport.width;
@@ -306,7 +313,7 @@ class DataProcessor {
     const scale = Math.min(scaleX, scaleY); // Use the smaller scale to maintain aspect ratio
 
     // Get the scaled viewport
-    const scaledViewport = page.getViewport({ scale: scale });
+    const scaledViewport = page.getViewport({ scale: 1 });
     // Calculate the offset to center the content within the margins
     const offsetX = (canvas.width - scaledViewport.width) / 2;
     const offsetY = (canvas.height - scaledViewport.height) / 2;
@@ -334,11 +341,13 @@ class DataProcessor {
     return canvas;
   }
 
-  async analyzeColors(canvas, colorPercentageLow, colorPercentageHigh) {
+  async analyzeColors(canvas, colorOption, priceMultiplier) {
+    console.log(`tangina mo analyze to!`);
     const ctx = canvas.getContext("2d");
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     let data = imageData.data;
     let coloredPixels = 0;
+    let whitePixels = 0;
 
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
@@ -348,18 +357,34 @@ class DataProcessor {
       if (!(r === g && g === b)) {
         coloredPixels++;
       }
+      // Check if the pixel is white
+      if (r > 200 && g > 200 && b > 200) {
+        whitePixels++;
+      }
     }
+
     const totalPixels = data.length / 4;
     const colorPercentage = (coloredPixels / totalPixels) * 100;
+    const whitePercentage = (whitePixels / totalPixels) * 100;
+
     console.log(`Color percentage: ${colorPercentage.toFixed(2)}%`);
-    return colorPercentage < 1
-      ? 0
-      : colorPercentage <= 60
-      ? colorPercentageLow
-      : colorPercentageHigh;
+    console.log(`White percentage: ${whitePercentage.toFixed(2)}%`);
+    if (colorOption === "grayscale") {
+      if (whitePercentage > 75) return 0; // 25% black = no added tax
+      if (whitePercentage < 75) return 1; // up to 75% is black
+      if (whitePercentage < 40) return 2; // passed the 40% threshold
+      return 0;
+    }
+    if (colorPercentage < 25) return priceMultiplier; //change tobase price return
+    if (colorPercentage > 85) return 18;
+    if (colorPercentage > 75) return 13;
+    if (colorPercentage > 50) return 8;
+    if (colorPercentage > 25) return 6;
+    return 18;
   }
   adjustColor(canvas) {
     const [contrast, brightness, saturation] = this.userSelection.preset;
+    console.log(`SATURION LEVEL: ${saturation}`);
     const imageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
     let data = imageData.data;
     if (contrast !== 0) {
@@ -425,31 +450,37 @@ class DataProcessor {
     if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
     return p;
   }
-  async generatePriceAmount(paperType, colorOption) {
-    //get PDF data
-    this.finalprice = 0;
-    let priceMultiplier;
-    if (paperType === "short") priceMultiplier = this.printer.priceShort;
-    if (paperType === "long") priceMultiplier = this.printer.priceLong;
-    if (paperType === "a4") priceMultiplier = this.printer.priceA4;
-    if (colorOption === "grayscale")
-      this.finalprice = priceMultiplier * this.finalpage;
-    else {
-      //remove current canvas
-      document.querySelector(".canvas_container").innerHTML = "";
-      for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
-        const page = await this.pdf.getPage(pageNum);
-        const canvas = await this.renderPage(page, pageNum);
-        const priceColoredByPercent = await this.analyzeColors(
-          canvas,
-          this.printer.colorPercentageLow,
-          this.printer.colorPercentageHigh
-        );
-        this.finalprice += priceMultiplier + priceColoredByPercent;
-        console.log(`new fp: ${this.finalprice}`);
+  async generatePriceAmount(canvas) {
+    try {
+      let finalprice = 0;
+      let priceMultiplier;
+      const paperType = document.getElementById("select-paper");
+      const selectColored = document.getElementById("select-colored");
+
+      console.log(paperType);
+      if (paperType.value === "short")
+        priceMultiplier = this.printer.priceShort;
+      if (paperType.value === "long") priceMultiplier = this.printer.priceLong;
+      if (paperType.value === "a4") priceMultiplier = this.printer.priceA4;
+      //BUG: overlapping
+      const priceColoredByPercent = await this.analyzeColors(
+        canvas,
+        selectColored.value,
+        priceMultiplier
+      );
+      console.log(`my price:!`);
+      console.log(priceMultiplier);
+      console.log(priceColoredByPercent);
+      finalprice += priceMultiplier + priceColoredByPercent;
+      console.log(`new fp: ${finalprice}`);
+      if (finalprice > 0) {
+        return finalprice;
+      } else {
+        throw new Error("Error! Unable to calculate price.");
       }
+    } catch (e) {
+      throw e;
     }
-    console.log(`document final price is: ${this.finalprice}`);
   }
   async generateFinalFile() {
     let finalpdfbytes;
@@ -465,28 +496,22 @@ class DataProcessor {
       ".canvas_container canvas"
     );
     const pdfDoc = await PDFDocument.create();
-
+    const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
     for (const canvas of renderedCanvases) {
       const imgData = canvas.toDataURL("image/jpeg"); //png automatic, add "image/jpeg"
       const imgBytes = Uint8Array.from(atob(imgData.split(",")[1]), (c) =>
         c.charCodeAt(0)
       );
-      const pngImage = await pdfDoc.embedJpg(imgBytes);
-      const pngDims = pngImage.scale(1);
 
+      const jpgImage = await pdfDoc.embedJpg(imgBytes);
+      const page = pdfDoc.addPage([selectedWidth, selectedHeight]);
       // Add a blank page to the document
-      const page = pdfDoc.addPage();
-
-      // Assuming `this.userSelection.paperSize` contains the dimensions in points
-      const [selectedWidth, selectedHeight] = this.userSelection.paperSize;
-      page.setSize(selectedWidth, selectedHeight);
-
-      // Draw the PNG image in the center on x-axis and at the top on y-axis
-      page.drawImage(pngImage, {
-        x: page.getWidth() / 2 - pngDims.width / 2,
+      // Draw the JPG image to cover the entire page
+      page.drawImage(jpgImage, {
+        x: 0,
         y: 0,
-        width: pngDims.width,
-        height: pngDims.height,
+        width: selectedWidth,
+        height: selectedHeight,
       });
     }
     const canvasBytes = await pdfDoc.save({ addDefaultPage: false });
