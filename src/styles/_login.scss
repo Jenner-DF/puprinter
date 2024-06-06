@@ -74,6 +74,13 @@
     width: 20%;
   }
 }
+.survey {
+  display: flex;
+  gap: 1rem;
+  & > * {
+    padding: 1rem;
+  }
+}
 .btn-main {
   background-color: $color-primary;
 }

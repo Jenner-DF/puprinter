@@ -23,7 +23,11 @@ class loginPanel extends Panel {
   </div>
   <div class="form__textheader_error error_signIn"></div>
   <button class="btn form__btn_swapform btn__main printnow"><h3>Print Now</h3></button>
-  <a href="#" id='admin'>Admin</a>
+  <div class="survey">
+  <button class="btn form__btn_swapform  printnow"  onclick="window.location.href='https://forms.gle/2fWLparc8xAhkPb49';"><h4>Take a Pre-survey! </h4></button>
+  <button class="btn form__btn_swapform  printnow" onclick="window.location.href='https://forms.gle/uAtbzjUKCDhCdPrUA';"><h4>Take a Post-survey!</h4></button>
+  </div>
+  <a href="#" id='admin' style="display: none;>Admin</a>
 
     <!-- PRINTFORM -->
     <!--
