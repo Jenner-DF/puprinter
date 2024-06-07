@@ -201,7 +201,9 @@ export default class Panel {
     });
     this.downloadPDF.addEventListener("click", async () => {
       try {
+        console.time("DOWNLOAD FILE LOADTIME:");
         await this.myFile.downloadPDF();
+        console.timeEnd("DOWNLOAD FILE LOADTIME:");
       } catch (e) {
         alert(e);
         console.log(e);
@@ -253,11 +255,12 @@ export default class Panel {
         await this.myFile.checkFile();
         this.disableUserInputButtons(false);
       } catch (e) {
-        this.selectCopies.value = 1;
+        // this.selectCopies.value = 1;
         this.selectCopies.disabled = false;
         this.fileInput.disabled = false;
         this.renderError(this.errorEl, e);
-        this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+        // this.fileLabel.textContent = "Upload a PDF/JPG/PNG file";
+        console.log(this.myFile);
       }
     });
     this.selectOrientation.addEventListener("change", async () => {
@@ -287,7 +290,9 @@ export default class Panel {
       this.modal.showModal();
       this.renderSpinner(this.modal);
       this.disableUserInputButtons(true);
+      console.time("PRICE AMOUNT GENERATION TIME:");
       await this.myFile.checkFile(true);
+      console.timeEnd("PRICE AMOUNT GENERATION TIME:");
       this.disableUserInputButtons(false);
       this.showPrintFormPriceDialog(
         this.myFile.finalprice,
@@ -357,6 +362,8 @@ export default class Panel {
     </div>`;
     this._clear(this.modal);
     this.modal.insertAdjacentHTML("afterbegin", gettingPincodeMarkup);
+    console.time("PIN CODE GENERATION TIME:");
+
     const getPincodeForm = await PrintForm.createInstance(
       await this.myFile.generateFinalFile(),
       this.printForm.select_colored.value,
@@ -365,6 +372,7 @@ export default class Panel {
       this.myFile.finalprice,
       this.myFile.finalpage
     );
+
     this._clear(this.modal);
     const pincodeMarkup = `
     <div class="modal__section modal__text">
@@ -379,6 +387,7 @@ export default class Panel {
     this._clear(this.modal);
     this.modal.insertAdjacentHTML("afterbegin", pincodeMarkup);
     this.modalcloselistener(document.querySelector(".closeModal"));
+    console.timeEnd("PIN CODE GENERATION TIME:");
 
     //AFTER SUBMITTING PRINT FORM
     this.printForm.reset();

@@ -1,25 +1,25 @@
 import { signIn, signup, userSignOut } from "./firebaseConfig";
 import Panel from "./Panel";
-import logo from "../img/Pay-U-Print-logo.png";
+import logo from "../img/PUPrinter_mainlogo.png";
 
 class loginPanel extends Panel {
   _loginMarkup = `<header class="header header__login">
-  <img
-    class="header__login_logo"
-    src="${logo}"
-    alt="Pay-U-Print Logo"
-  />
+  <a href="#" onclick="location.reload();">
+    <img
+      class="header__login_logo"
+      src="${logo}"
+      alt="Pay-U-Print Logo"
+    />
+  </a>
 </header>
 <main class="main container">
 <div class="signIn">
-  <div class="form__textheader">Hello, PUPian!</div>
-  <h1></h1>
   <div class="instructions">
-    <h1>How to Use Our Pay-U-Print Machine:<h1>
-    <p>Step 1: <span>Fill Out the Print Form: Quick and easy!</span></p>
-    <p>Step 2: <span>Save Your PIN: You'll need it for printing.</span></p>
-    <p>Step 3: <span>Enter your PIN: Head to the machine located beside the Engineering Spectrum(rm. 415) at the CEA building and type it in.</span></p>
-    <p>Step 4: <span>Insert Coins and Print: Pay, watch the magic happen, and get your printout!</span></p>
+    <h1>How to Use Our Pay-U-Print Machine:</h1>
+    <p>Step 1: <span>Fill Form: Quick and easy.</span></p>
+    <p>Step 2: <span>Save PIN: Needed for printing.</span></p>
+    <p>Step 3: <span>Enter PIN: Use machine in CEA 423.</span></p>
+    <p>Step 4: <span>Insert Coins: Print and collect.</span></p>
   </div>
   <div class="form__textheader_error error_signIn"></div>
   <button class="btn form__btn_swapform btn__main printnow"><h3>Print Now</h3></button>

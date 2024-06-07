@@ -18,6 +18,7 @@ class DataProcessor {
     this.readyForSubmission = false;
     this.margin = 5; // size in pixels
     this.thresholds = JSON.parse(this.printer.thresholds);
+    console.log(this.thresholds);
     this.selections = {
       paperSizes: {
         short: [612.0, 792.0],
@@ -41,9 +42,13 @@ class DataProcessor {
   }
 
   async checkFile(readyForSubmission = false) {
+    console.time("UPLOAD FILE LOADTIME:");
+
     this.readyForSubmission = readyForSubmission;
     //reset canvas;
     document.querySelector(".canvas_container").innerHTML = "";
+    //reset error element
+    document.querySelector(".errormsg").innerHTML = "";
     //get user selection
     this.getUserSelection();
     this.userFiles = []; //init user files in array
@@ -77,6 +82,7 @@ class DataProcessor {
     const combinedBytes = await this.mergeAllBytes();
     //render output PDF:
     await this.loadPDF(combinedBytes);
+    console.timeEnd("UPLOAD FILE LOADTIME:");
   }
   async mergeAllBytes() {
     //get array of pdf buffers
@@ -126,14 +132,18 @@ class DataProcessor {
 
         // Add a new page with the specified dimensions
         const newPage = mergedPdf.addPage([
-          selectedWidth + this.margin * 2,
-          selectedHeight + this.margin * 2,
+          selectedWidth, //PAPER WITH NO MARGINS
+          selectedHeight,
+          // selectedWidth + this.margin * 2, //PAPER WITH MARGINS
+          // selectedHeight + this.margin * 2,
         ]);
 
         // Calculate the scaling factor to fit the content into the new page
         const scale = Math.min(
-          (selectedWidth - this.margin * 2) / page.getWidth(),
-          (selectedHeight - this.margin * 2) / page.getHeight()
+          selectedWidth / page.getWidth(), //PAPER WITH NO MARGINS
+          selectedHeight / page.getHeight()
+          // (selectedWidth - this.margin * 2) / page.getWidth(), //PAPER WITH MARGINS
+          // (selectedHeight - this.margin * 2) / page.getHeight()
         );
 
         // Get the dimensions of the page scaled to fit the new page
@@ -144,10 +154,15 @@ class DataProcessor {
         const [embeddedPage] = await mergedPdf.embedPdf(modifiedPdfBytes, [i]);
 
         //embeds existing pdf page into the new page
-        newPage.drawPage(embeddedPage, {
-          x: this.margin + (selectedWidth - scaledWidth) / 2,
-          y: selectedHeight - scaledHeight - this.margin, //on top y-axis
 
+        newPage.drawPage(embeddedPage, {
+          x: (selectedWidth - scaledWidth) / 2, //PAPER WITH NO MARGIN
+          y: selectedHeight - scaledHeight, //on top y-axis
+          // x: this.margin + (selectedWidth - scaledWidth) / 2, //PAPER WITH MARGIN
+          // y: selectedHeight - scaledHeight - this.margin, //on top y-axis
+
+          // width: selectedWidth,
+          // height: selectedHeight,
           width: scaledWidth,
           height: scaledHeight,
         });
@@ -173,14 +188,18 @@ class DataProcessor {
 
       // Add a new page with specified dimensions including margins
       const page = pdfDoc.addPage([
-        selectedWidth + this.margin * 2,
-        selectedHeight + this.margin * 2,
+        selectedWidth, //PAPER WITH NO MARGINS
+        selectedHeight,
+        // selectedWidth + this.margin * 2, //PAPER WITH MARGINS
+        // selectedHeight + this.margin * 2,
       ]);
 
       // Calculate the scaling factor to fit the content into the new page
       const scale = Math.min(
-        (selectedWidth - this.margin * 2) / image.width,
-        (selectedHeight - this.margin * 2) / image.height
+        selectedWidth / image.width, //PAPER WITH NO MARGINS
+        selectedHeight / image.height
+        // (selectedWidth - this.margin * 2) / image.width, //PAPER WITH MARGINS
+        // (selectedHeight - this.margin * 2) / image.height
       );
 
       // Get the dimensions of the page scaled to fit the new page
@@ -189,8 +208,10 @@ class DataProcessor {
 
       // Draw the image on the page, centered within the margins
       page.drawImage(image, {
-        x: this.margin + (selectedWidth - scaledWidth) / 2,
-        y: selectedHeight - scaledHeight - this.margin, //on top y-axis
+        x: (selectedWidth - scaledWidth) / 2, //PAPER WITH NO MARIGN
+        y: selectedHeight - scaledHeight, //on top y-axis
+        // x: this.margin + (selectedWidth - scaledWidth) / 2, //PAPER WITH MARGIN
+        // y: selectedHeight - scaledHeight - this.margin, //on top y-axis
         width: scaledWidth,
         height: scaledHeight,
       });
@@ -247,6 +268,7 @@ class DataProcessor {
         console.log("ako ay ready for submisison!");
         this.finalprice += await this.generatePriceAmount(canvas);
       }
+      console.log(`new fp:${pageNum}, ${this.finalprice}`);
     }
     console.log("magkano?!");
     console.log(this.finalprice);
@@ -349,11 +371,16 @@ class DataProcessor {
     let data = imageData.data;
     let coloredPixels = 0;
     let whitePixels = 0;
+    let blackPixels = 0;
 
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
+      //check black
+      if (r === 0 && g === 0 && b === 0) {
+        blackPixels++;
+      }
       // Check if the pixel is not grayscale
       if (!(r === g && g === b)) {
         coloredPixels++;
@@ -367,8 +394,11 @@ class DataProcessor {
     const totalPixels = data.length / 4;
     const colorPercentage = (coloredPixels / totalPixels) * 100;
     const whitePercentage = (whitePixels / totalPixels) * 100;
+    const blackPercentage = (blackPixels / totalPixels) * 100;
     console.log("whitespace:");
     console.log(whitePercentage);
+    console.log("blackspace:");
+    console.log(blackPercentage);
     console.log("color:");
     console.log(colorPercentage);
 
@@ -380,27 +410,75 @@ class DataProcessor {
     } else {
       additionalPrice = this.getColorAdditionalPrice(
         colorPercentage,
-        paperType
+        paperType,
+        whitePercentage
       );
     }
     console.log(additionalPrice);
+    // this.getAdditionalPrice(
+    //   whitePercentage,
+    //   colorPercentage,
+    //   paperType,
+    //   colorOption
+    // );
     return additionalPrice;
   }
+  //if the paper is full black page and original, it runs color additional price only
   // Helper function to get additional price for grayscale
-  getGrayscaleAdditionalPrice(whitePercentage) {
-    if (whitePercentage > 75) return 0; // 25% black = no added tax
+  //if whitePercentage
+  getAdditionalPrice(whitePercentage, colorPercentage, paperType, colorOption) {
+    //if full black, THEN color = 0 and whitepace = 0;
+
+    const blackPercentage = 100 - whitePercentage;
+    //ASD
+    // for full black page where color = 0 but whitespace is like 10%
+    for (const level of this.thresholds.color) {
+      if (colorPercentage >= level.minPercentage) {
+        return paperType === "long" && level.longPrice
+          ? (price = level.longPrice)
+          : (price = level.additionalPrice);
+      }
+    }
     for (const level of this.thresholds.grayscale) {
-      if (whitePercentage >= level.maxPercentage) {
+      //or whitespace(not grayscale)
+      if (whitePercentage >= level.minPercentage) {
+        //HIGHER PERCENTAGE MORE BLACK INK
         return level.additionalPrice;
       }
     }
+    for (const level of this.thresholds.colorPercentage) {
+      //or whitespace(not grayscale)
+      if (blackPercentage >= level.minPercentage) {
+        //HIGHER PERCENTAGE MORE BLACK INK
+        return level.additionalPrice;
+      }
+    }
+
+    return 0;
+  }
+  getGrayscaleAdditionalPrice(whitePercentage) {
+    for (const level of this.thresholds.grayscale) {
+      if (whitePercentage >= level.minPercentage) {
+        //HIGHER PERCENTAGE MORE BLACK INK
+        return level.additionalPrice;
+      }
+    }
+
     return 0; // Default to 0 if no threshold matches
   }
 
   // Helper function to get additional price for color
-  getColorAdditionalPrice(colorPercentage, paperType) {
+  getColorAdditionalPrice(colorPercentage, paperType, whitePercentage) {
+    const blackPercentage = 100 - whitePercentage;
     for (const level of this.thresholds.color) {
-      if (colorPercentage >= level.maxPercentage) {
+      if (colorPercentage >= level.minPercentage) {
+        return paperType === "long" && level.longPrice
+          ? level.longPrice
+          : level.additionalPrice;
+      }
+    }
+    for (const level of this.thresholds.color) {
+      if (blackPercentage >= level.minPercentage) {
         return paperType === "long" && level.longPrice
           ? level.longPrice
           : level.additionalPrice;
