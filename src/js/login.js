@@ -27,7 +27,7 @@ class loginPanel extends Panel {
   <button class="btn form__btn_swapform  printnow"  onclick="window.location.href='https://forms.gle/2fWLparc8xAhkPb49';"><h4>Take a Pre-survey! </h4></button>
   <button class="btn form__btn_swapform  printnow" onclick="window.location.href='https://forms.gle/uAtbzjUKCDhCdPrUA';"><h4>Take a Post-survey!</h4></button>
   </div>
-  <a href="#" id='admin' style="display: none;>Admin</a>
+  <a href="#" id='admin' style="display: none;">Admin</a>
 
     <!-- PRINTFORM -->
     <!--
@@ -46,6 +46,17 @@ class loginPanel extends Panel {
     </p>
   </div>
 </div>
+<!-- DIALOG -->
+        <dialog class="modal">
+        <h1>Price Breakdown:</h1>
+        <div class="transaction">
+          <div class="page">Page 1 ----> ₱4</div>
+          <div class="page">Page 2 ----> ₱7</div>
+          <div class="page">Page 3 ----> ₱2</div>
+          <div class="page">Page 4 ----> ₱4</div>
+          <div class="page">Page 5 ----> ₱2</div>
+        </div>
+        </dialog>
     `;
   render() {
     this._clear(document.body);
@@ -57,6 +68,9 @@ class loginPanel extends Panel {
     this.addLoginListener();
   }
   addLoginListener() {
+    const modal = document.querySelector(".modal");
+    modal.showModal();
+    console.log(modal);
     const printnow = document.querySelector(".printnow");
     const login = document.querySelector("#admin");
     const textheader_error_login = document.querySelector(".error_signIn");
