@@ -8,61 +8,133 @@ export default class Panel {
   _parentEl;
   generatePrintFormMarkup(printer) {
     // console.log(user); NOTE: make an object and set it to ${} so without signing in is ok! or divide wallet section
+    // Generate table headers dynamically based on grayscale and color thresholds
+    const thresholds = JSON.parse(printer.thresholds);
+    // Filter out thresholds with minPercentage = 0 for both grayscale and color
+    const filteredGrayscale = thresholds.grayscale.filter(
+      (threshold) => threshold.minPercentage !== 0
+    );
+    const filteredColor = thresholds.color.filter(
+      (threshold) => threshold.minPercentage !== 0
+    );
+
+    // Reverse the filtered thresholds for descending order
+    const reversedGrayscale = filteredGrayscale.slice().reverse();
+    const reversedColor = filteredColor.slice().reverse();
+
+    // Generate table headers dynamically based on reversed grayscale and color thresholds
+    const grayscaleHeaders = reversedGrayscale
+      .map((threshold) => `<th>&gt;${threshold.minPercentage}%</th>`)
+      .join("");
+    const colorHeaders = reversedColor
+      .map((threshold) => `<th>&gt;${threshold.minPercentage}%</th>`)
+      .join("");
+
+    // Generate table data for grayscale and color thresholds
+    const grayscaleData = reversedGrayscale
+      .map((threshold) => `<td>+${threshold.additionalPrice}</td>`)
+      .join("");
+    const colorData = reversedColor
+      .map((threshold) => `<td>+${threshold.additionalPrice}</td>`)
+      .join("");
+    const colorDataLong = reversedColor
+      .map((threshold) => `<td>+${threshold.longPrice}</td>`)
+      .join("");
+    ` <table border="1">
+          <tr>
+            <td></td>
+            <th rowspan="2">BASE PRICE</th>
+            <th colspan="${reversedGrayscale.length}">BLACK</th>
+            <th colspan="${reversedColor.length}">COLOR</th>
+          </tr>
+          <tr>
+            <td></td>
+            ${grayscaleHeaders}
+            ${colorHeaders}
+          </tr>
+          <tr>
+            <th>SHORT</th>
+            <td>2</td>
+            ${grayscaleData}
+            ${colorData}
+          </tr>
+          <tr>
+            <th>A4</th>
+            <td>2</td>
+            ${grayscaleData}
+            ${colorData}
+          </tr>
+          <tr>
+            <th>LONG</th>
+            <td>3</td>
+            ${grayscaleData}
+            ${colorDataLong}
+          </tr>
+        </table>`;
+    // Construct the table HTML
     return `
     <div class="priceTable">
-    <h2>Price Guide (per page): </h2>
-    <div> 
-    <table border="1">
-    <tr>
-      <td></td>
-      <th rowspan="2">BASE PRICE</th>
-      <th colspan="2">BLACK</th>
-      <th colspan="3">COLOR</th>
-    </tr>
-    <tr>
-      <td></td>
-      <td>&gt;65%</td>
-      <td>&gt;75%</td>
-      <td>&gt;25%</td>
-      <td>&gt;50%</td>
-      <td>&gt;75%</td>
-    </tr>
-    <tr>
-      <th>SHORT</th>
-      <td>2</td>
-      <td>+1</td>
-      <td>+2</td>
-      <td>+6</td>
-      <td>+8</td>
-      <td>+13</td>
-    </tr>
-    <tr>
-      <th>A4</th>
-      <td>2</td>
-      <td>+1</td>
-      <td>+2</td>
-      <td>+6</td>
-      <td>+8</td>
-      <td>+13</td>
-    </tr>
-    <tr>
-      <th>LONG</th>
-      <td>3</td>
-      <td>+1</td>
-      <td>+2</td>
-      <td>+7</td>
-      <td>+12</td>
-      <td>+17</td>
-    </tr>
-  </table>
+      <h2>Price Guide (per page): </h2>
+      <div> 
+        <table border="1">
+          <tr>
+            <td></td>
+            <th rowspan="2">BASE PRICE</th>
+            <th colspan="${reversedGrayscale.length}">BLACK</th>
+          </tr>
+          <tr>
+            <td></td>
+            ${grayscaleHeaders}
+          </tr>
+          <tr>
+            <th>SHORT</th>
+            <td>2</td>
+            ${grayscaleData}
+          </tr>
+          <tr>
+            <th>A4</th>
+            <td>2</td>
+            ${grayscaleData}
+          </tr>
+          <tr>
+            <th>LONG</th>
+            <td>3</td>
+            ${grayscaleData}
+          </tr>
+        </table>
+      </div>
+       <div> 
+        <table border="1">
+          <tr>
+            <td></td>
+            <th rowspan="2">BASE PRICE</th>
+            <th colspan="${reversedColor.length}">COLOR</th>
+          </tr>
+          <tr>
+            <td></td>
+            ${colorHeaders}
+          </tr>
+          <tr>
+            <th>SHORT</th>
+            <td>2</td>
+            ${colorData}
+          </tr>
+          <tr>
+            <th>A4</th>
+            <td>2</td>
+            ${colorData}
+          </tr>
+          <tr>
+            <th>LONG</th>
+            <td>3</td>
+            ${colorDataLong}
+          </tr>
+        </table>
+      </div>
+       <p><strong>Note:</strong> The researchers have implemented an algorithm in order to detect the color of each page in the document.</p>
+    </div>
     </div>
     
-    <p><strong>Note:</strong> For colored prints, if the detected color percentage is 60% or below, the additional cost is ₱${
-      printer.colorPercentageLowPrice
-    }. If the detected color percentage is above 60%, the additional cost is ₱${
-      printer.colorPercentageHighPrice
-    }.</p>
-    </div>
     <div class="section print__section_printForm">
       <!-- PRINTFORM -->
       <div class="errormsg"></div>
@@ -145,11 +217,8 @@ export default class Panel {
         <!-- DIALOG -->
         <dialog class="modal">
         </dialog>
-       `;
+  `;
   }
-  // <input type="number" id="contrast" placeholder="Enter contrast">;
-  // <input type="number" id="brightness" placeholder="Enter brightness">;
-  // <input type="number" id="saturation" placeholder="Enter saturation">
   async renderPrintForm() {
     //NOTE: crashing when user logs in because of spinner
     // this.renderSpinner(this._parentEl.children[0].children[2].children[1]);
@@ -172,7 +241,7 @@ export default class Panel {
     this.errorEl = document.querySelector(".errormsg");
     this.fileInput = this.printForm.querySelector("#file");
     this.fileLabel = this.printForm.querySelector(".file_label");
-    const openDialog = this.printForm.querySelector(".openDialog");
+    this.openDialog = this.printForm.querySelector(".openDialog");
     this.downloadPDF = this.printForm.querySelector(".downloadPDF");
     //prevents submission of prinform form
     this.printForm.addEventListener("submit", (e) => e.preventDefault());
@@ -273,7 +342,7 @@ export default class Panel {
       }
     });
     // open modal after clicking submit
-    openDialog.addEventListener("click", async () => {
+    this.openDialog.addEventListener("click", async () => {
       try {
         this.errorEl.innerHTML = "";
         this.paymentOption = this.printForm.select_payment.value;
@@ -304,20 +373,47 @@ export default class Panel {
       this.modal.close();
     }
   }
-  showPrintFormPriceDialog() {
-    const priceDialogMarkup = `
-      <div class="modal__section modal__text">
-        <p>Amount to Pay:</p>
+  generatePriceBreakdownMarkup() {
+    console.log(this.myFile.pricePerPage);
+    const markupPage = this.myFile.pricePerPage
+      .map(
+        (page, index) =>
+          `<div class="page">
+              <div class="page-number">Page ${index + 1} </div>
+              <div class="page-colorPercent">Color (${
+                page.colorPercent
+              }%)  <span class="percent">₱${page.price}</span> </div>
+            </div>`
+      )
+      .join("");
+    const markup = `
+      <div class="modal-title">Price Breakdown:</div>
+      <div class="transaction">
+          ${markupPage}
       </div>
-      <div class="modal__section modal__img">
-        <p class="modal__img_text">₱${this.myFile.finalprice}</p>
-      </div>
+      <div class="total-amount">Total: ₱${this.myFile.finalprice}</div>
       <div class="modal__section modal__btns">
-        <button class="btn btn__main btnSubmit">Print</button>
-        <button class="btn closeModal">Cancel</button>
-      </div>`;
+      <button class="btn closeModal">Cancel</button>
+      <button class="btn btn__main btnSubmit">Confirm</button>
+      </div>
+    `;
+    return markup;
+  }
+  showPrintFormPriceDialog() {
+    // const priceDialogMarkup = `
+    //   <div class="modal__section modal__text">
+    //     <p>Amount to Pay:</p>
+    //   </div>
+    //   <div class="modal__section modal__img">
+    //     <p class="modal__img_text">₱${this.myFile.finalprice}</p>
+    //   </div>
+    //   <div class="modal__section modal__btns">
+    //     <button class="btn btn__main btnSubmit">Print</button>
+    //     <button class="btn closeModal">Cancel</button>
+    //   </div>`;
+    const markup = this.generatePriceBreakdownMarkup();
     this._clear(this.modal);
-    this.modal.insertAdjacentHTML("afterbegin", priceDialogMarkup);
+    this.modal.insertAdjacentHTML("afterbegin", markup);
     //generate buttons inside the dialog
     this.modalsubmitlistener(document.querySelector(".btnSubmit"), () =>
       this.showPrintFormPaymentDialog(this.paymentOption)
@@ -412,6 +508,8 @@ export default class Panel {
     this.selectCopies.disabled = state;
     this.downloadPDF.disabled = state;
     this.fileInput.disabled = state;
+    this.openDialog.disabled = state;
+
     state
       ? this.downloadPDF.classList.add("hidden")
       : this.downloadPDF.classList.remove("hidden");

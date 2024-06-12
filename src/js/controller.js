@@ -30,6 +30,7 @@ const spinner = ` <div class="spinner">
   <use href="${icons}#icon-loader"></use>
 </svg>
 </div>`;
+
 //NOTE: APP;
 try {
   onAuthStateChanged(auth, async (user) => {

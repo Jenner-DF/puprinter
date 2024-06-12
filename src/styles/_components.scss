@@ -39,11 +39,12 @@
 dialog {
   margin: auto;
   width: 25rem;
-  height: 15rem;
   padding: 3rem 3rem;
   border: none;
   border-radius: 15px;
   box-shadow: 0 5px 15px $box-shadow-color;
+  max-height: 60vh;
+
   overflow: hidden;
   p {
     font-weight: 600;
@@ -61,17 +62,13 @@ dialog {
     height: 100%;
     width: 70%;
   }
-  .modal {
-    .transaction {
-      display: flex;
-      flex-direction: column;
-      font-size: 5rem;
-      gap: 2rem;
-      border: 5px solid red;
-      .page {
-      }
-    }
+  .modal-title {
+    font-size: 2.4rem;
+    font-weight: 800;
+    padding: 1rem 0;
+  }
 
+  .modal {
     &__img {
       display: flex;
       justify-content: center;
@@ -93,6 +90,7 @@ dialog {
       }
     }
     &__btns {
+      margin-top: 2rem;
       display: flex;
       gap: 2rem;
       .btn {
@@ -108,4 +106,39 @@ dialog {
       }
     }
   }
+
+  .transaction {
+    display: flex;
+    flex-direction: column;
+    font-size: 1.6rem;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 8rem;
+    max-height: 20rem;
+    overflow-y: auto;
+    // border: 2px solid purple;
+    .page {
+      &-number {
+        font-weight: 500;
+      }
+      &-colorPercent {
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        font-weight: 300;
+        .percent {
+          align-self: flex-end;
+          text-align: right;
+          color: black;
+          // border: 2px solid pink;
+        }
+      }
+    }
+  }
+}
+.total-amount {
+  text-align: right;
+  font-weight: 800;
+  font-size: 2.1rem;
+  padding-top: 2rem;
 }

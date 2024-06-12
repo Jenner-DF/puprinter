@@ -47,14 +47,36 @@ class loginPanel extends Panel {
   </div>
 </div>
 <!-- DIALOG -->
-        <dialog class="modal">
-        <h1>Price Breakdown:</h1>
+         <dialog class="modal price-breakdown">
+        <div class="modal-title">Price Breakdown:</div>
         <div class="transaction">
-          <div class="page">Page 1 ----> ₱4</div>
-          <div class="page">Page 2 ----> ₱7</div>
-          <div class="page">Page 3 ----> ₱2</div>
-          <div class="page">Page 4 ----> ₱4</div>
-          <div class="page">Page 5 ----> ₱2</div>
+            <div class="page">
+              <div class="page-number">Page 1 </div>
+              <div class="page-colorPercent">Color (12.41%)  <span class="percent">₱2</span> </div>
+            </div><div class="page">
+              <div class="page-number">Page 2 </div>
+              <div class="page-colorPercent">Color (0.22%)  <span class="percent">₱2</span> </div>
+            </div><div class="page">
+              <div class="page-number">Page 3 </div>
+              <div class="page-colorPercent">Color (8.86%)  <span class="percent">₱2</span> </div>
+            </div><div class="page">
+              <div class="page-number">Page 4 </div>
+              <div class="page-colorPercent">Color (13.73%)  <span class="percent">₱6</span> </div>
+            </div><div class="page">
+              <div class="page-number">Page 5 </div>
+              <div class="page-colorPercent">Color (33.16%)  <span class="percent">₱8</span> </div>
+            </div><div class="page">
+              <div class="page-number">Page 6 </div>
+              <div class="page-colorPercent">Color (0.62%)  <span class="percent">₱2</span> </div>
+            </div><div class="page">
+              <div class="page-number">Page 7 </div>
+              <div class="page-colorPercent">Color (1.28%)  <span class="percent">₱2</span> </div>
+            </div>
+        </div>
+        <div class="total-amount">Total: ₱24</div>
+        <div class="modal__section modal__btns">
+        <button class="btn closeModal">Cancel</button>
+        <button class="btn btn__main btnSubmit">Confirm</button>
         </div>
         </dialog>
     `;
@@ -68,9 +90,9 @@ class loginPanel extends Panel {
     this.addLoginListener();
   }
   addLoginListener() {
-    const modal = document.querySelector(".modal");
-    modal.showModal();
-    console.log(modal);
+    // const modal = document.querySelector(".modal");
+    // modal.showModal();
+    // console.log(modal);
     const printnow = document.querySelector(".printnow");
     const login = document.querySelector("#admin");
     const textheader_error_login = document.querySelector(".error_signIn");

@@ -14,9 +14,10 @@ class DataProcessor {
     this.printer = printer;
     this.maxFiles = 5;
     this.finalpage = 0;
-    this.finalprice = 1;
+    this.finalprice = 0;
     this.readyForSubmission = false;
     this.margin = 5; // size in pixels
+    this.pricePerPage = [];
     this.thresholds = JSON.parse(this.printer.thresholds);
     console.log(this.thresholds);
     this.selections = {
@@ -258,7 +259,7 @@ class DataProcessor {
     console.log(this.userSelection);
     console.log(this.readyForSubmission);
     //rendering each page
-    this.finalprice = 0;
+    this.pricePerPage = [];
     for (let pageNum = 1; pageNum <= this.finalpage; pageNum++) {
       const page = await this.pdf.getPage(pageNum);
       //add args for papersize and coloroption
@@ -266,11 +267,16 @@ class DataProcessor {
       this.adjustColor(canvas);
       if (this.readyForSubmission) {
         console.log("ako ay ready for submisison!");
-        this.finalprice += await this.generatePriceAmount(canvas);
+        await this.generatePriceAmount(canvas);
       }
-      console.log(`new fp:${pageNum}, ${this.finalprice}`);
     }
     console.log("magkano?!");
+    console.log(this.pricePerPage);
+
+    this.finalprice = this.pricePerPage.reduce(
+      (sum, item) => sum + item.price,
+      0
+    );
     console.log(this.finalprice);
   }
 
@@ -371,16 +377,11 @@ class DataProcessor {
     let data = imageData.data;
     let coloredPixels = 0;
     let whitePixels = 0;
-    let blackPixels = 0;
 
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
-      //check black
-      if (r === 0 && g === 0 && b === 0) {
-        blackPixels++;
-      }
       // Check if the pixel is not grayscale
       if (!(r === g && g === b)) {
         coloredPixels++;
@@ -390,102 +391,76 @@ class DataProcessor {
         whitePixels++;
       }
     }
-
     const totalPixels = data.length / 4;
     const colorPercentage = (coloredPixels / totalPixels) * 100;
     const whitePercentage = (whitePixels / totalPixels) * 100;
-    const blackPercentage = (blackPixels / totalPixels) * 100;
     console.log("whitespace:");
     console.log(whitePercentage);
-    console.log("blackspace:");
-    console.log(blackPercentage);
     console.log("color:");
     console.log(colorPercentage);
 
     //NOTE:gpt
-    let additionalPrice = 0;
+    const [pagePrice, pageColorPercentage] = this.getPagePrice(
+      whitePercentage,
+      colorPercentage,
+      paperType,
+      colorOption
+    );
+    // if (colorOption === "grayscale") {
+    //   const [additionalPrice, colorPercentage] =
+    //     this.getGrayscaleAdditionalPrice(whitePercentage);
+    // } else {
+    //   const [additionalPrice, colorPercentage] = this.getColorAdditionalPrice(
+    //     colorPercentage,
+    //     paperType,
+    //     whitePercentage
+    //   );
+    // }
+    console.log(`price`);
+    console.log(pagePrice);
+    console.log(`pagecol%`);
+    console.log(pageColorPercentage);
+    return [pagePrice, pageColorPercentage];
+  }
+  getPagePrice(whitePercentage, colorPercentage, paperType, colorOption) {
+    console.log(`getting page price....`);
+    console.log(colorOption);
+    console.log(paperType);
+    console.log(this.thresholds);
+    const blackPercentage = 100 - whitePercentage;
 
-    if (colorOption === "grayscale") {
-      additionalPrice = this.getGrayscaleAdditionalPrice(whitePercentage);
+    //if the paper is full black page and original, it runs color additional price only
+
+    if (colorPercentage === 0 && blackPercentage > colorPercentage) {
+      for (const level of this.thresholds.grayscale) {
+        if (blackPercentage >= level.minPercentage) {
+          //LOWER PERCENTAGE MORE BLACK INK
+          return [level.additionalPrice, blackPercentage];
+        }
+      }
+      return [0, 0];
     } else {
-      additionalPrice = this.getColorAdditionalPrice(
-        colorPercentage,
-        paperType,
-        whitePercentage
-      );
-    }
-    console.log(additionalPrice);
-    // this.getAdditionalPrice(
-    //   whitePercentage,
-    //   colorPercentage,
-    //   paperType,
-    //   colorOption
-    // );
-    return additionalPrice;
-  }
-  //if the paper is full black page and original, it runs color additional price only
-  // Helper function to get additional price for grayscale
-  //if whitePercentage
-  getAdditionalPrice(whitePercentage, colorPercentage, paperType, colorOption) {
-    //if full black, THEN color = 0 and whitepace = 0;
-
-    const blackPercentage = 100 - whitePercentage;
-    //ASD
-    // for full black page where color = 0 but whitespace is like 10%
-    for (const level of this.thresholds.color) {
-      if (colorPercentage >= level.minPercentage) {
-        return paperType === "long" && level.longPrice
-          ? (price = level.longPrice)
-          : (price = level.additionalPrice);
+      //colored
+      console.log("running in colored!!!");
+      for (const level of this.thresholds.color) {
+        if (colorPercentage >= level.minPercentage && colorPercentage !== 0) {
+          return paperType === "long" && level.longPrice
+            ? [level.longPrice, colorPercentage]
+            : [level.additionalPrice, colorPercentage];
+        }
       }
-    }
-    for (const level of this.thresholds.grayscale) {
-      //or whitespace(not grayscale)
-      if (whitePercentage >= level.minPercentage) {
-        //HIGHER PERCENTAGE MORE BLACK INK
-        return level.additionalPrice;
+      //IF whitespace = 0 and color = 0 (bug:black is not detected as color)
+      for (const level of this.thresholds.color) {
+        if (blackPercentage >= level.minPercentage) {
+          return paperType === "long" && level.longPrice
+            ? [level.longPrice, blackPercentage]
+            : [level.additionalPrice, blackPercentage];
+        }
       }
+      return [this.thresholds.color[0].longPrice, 100];
     }
-    for (const level of this.thresholds.colorPercentage) {
-      //or whitespace(not grayscale)
-      if (blackPercentage >= level.minPercentage) {
-        //HIGHER PERCENTAGE MORE BLACK INK
-        return level.additionalPrice;
-      }
-    }
-
-    return 0;
-  }
-  getGrayscaleAdditionalPrice(whitePercentage) {
-    for (const level of this.thresholds.grayscale) {
-      if (whitePercentage >= level.minPercentage) {
-        //HIGHER PERCENTAGE MORE BLACK INK
-        return level.additionalPrice;
-      }
-    }
-
-    return 0; // Default to 0 if no threshold matches
   }
 
-  // Helper function to get additional price for color
-  getColorAdditionalPrice(colorPercentage, paperType, whitePercentage) {
-    const blackPercentage = 100 - whitePercentage;
-    for (const level of this.thresholds.color) {
-      if (colorPercentage >= level.minPercentage) {
-        return paperType === "long" && level.longPrice
-          ? level.longPrice
-          : level.additionalPrice;
-      }
-    }
-    for (const level of this.thresholds.color) {
-      if (blackPercentage >= level.minPercentage) {
-        return paperType === "long" && level.longPrice
-          ? level.longPrice
-          : level.additionalPrice;
-      }
-    }
-    return 0; // Default to 0 if no threshold matches
-  }
   adjustColor(canvas) {
     const [contrast, brightness, saturation] = this.userSelection.preset;
     console.log(`SATURION LEVEL: ${saturation}`);
@@ -556,32 +531,27 @@ class DataProcessor {
   }
   async generatePriceAmount(canvas) {
     try {
-      let finalprice = 0;
+      //canvas is equivalent to a page
       let priceMultiplier;
       const paperType = document.getElementById("select-paper");
       const selectColored = document.getElementById("select-colored");
-
       console.log(paperType);
       if (paperType.value === "short")
         priceMultiplier = this.printer.priceShort;
       if (paperType.value === "long") priceMultiplier = this.printer.priceLong;
       if (paperType.value === "a4") priceMultiplier = this.printer.priceA4;
-      //BUG: overlapping
-      const priceColoredByPercent = await this.analyzeColors(
+      const [pagePrice, pageColorPercentage] = await this.analyzeColors(
         canvas,
         selectColored.value,
         paperType.value
       );
       console.log(`my price:!`);
       console.log(priceMultiplier);
-      console.log(priceColoredByPercent);
-      finalprice += priceMultiplier + priceColoredByPercent;
-      console.log(`new fp: ${finalprice}`);
-      if (finalprice > 0) {
-        return finalprice;
-      } else {
-        throw new Error("Error! Unable to calculate price.");
-      }
+      console.log(pageColorPercentage);
+      this.pricePerPage.push({
+        price: priceMultiplier + pagePrice,
+        colorPercent: pageColorPercentage.toFixed(2),
+      });
     } catch (e) {
       throw e;
     }
