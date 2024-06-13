@@ -133,7 +133,25 @@ async function getPrinterConfig(uid) {
     throw e;
   }
 }
+async function addIssueForm(category, comment) {
+  try {
+    console.log(category);
+    console.log(comment);
+    await addDoc(
+      collection(db, "issues"),
+      {
+        date: serverTimestamp(),
+        category: category,
+        issue: comment,
+      },
+      { merge: true }
+    );
+  } catch (e) {
+    throw e;
+  }
+}
 export {
+  addIssueForm,
   app,
   query,
   orderBy,

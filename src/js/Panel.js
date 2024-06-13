@@ -2,7 +2,7 @@ import icons from "../img/icons.svg";
 import printerloading from "../img/printerloading.gif";
 import PrintForm from "./printForms";
 import { DataProcessor } from "./fileProcess";
-import { getPrinterConfig } from "./firebaseConfig";
+import { addIssueForm, getPrinterConfig } from "./firebaseConfig";
 
 export default class Panel {
   _parentEl;
@@ -214,6 +214,21 @@ export default class Panel {
         <h1 style="text-align:center;padding: 10px 0">Output PDF:</h1>
         <div class="canvas_container"></div>
       </div>
+      <form class="issueForm">
+        <div class="issues">
+          <label for="select-issue">Report an Issue:</label>
+          <select id="select-issue" name="select_issue" required >
+            <option value="Machine">Machine</option>
+            <option value="Application">Application</option>
+            <option value="Others">Others</option>
+          </select>
+          <textarea id="issue-comments" name="issue_comments" rows="4" cols="50" placeholder="Describe the issue in detail..."></textarea>
+    </div>
+    <div class="submit">
+    <button type="submit" class="btn btn__main issuebtn">Report</button>
+    </div>
+</div>
+</form>
         <!-- DIALOG -->
         <dialog class="modal">
         </dialog>
@@ -231,6 +246,24 @@ export default class Panel {
     this.addPrintFormListener();
   }
   addPrintFormListener() {
+    this.issueForm = document.querySelector(".issueForm");
+    this.submitIssue = document.querySelector(".issuebtn");
+    this.issueForm.addEventListener("submit", (e) => e.preventDefault());
+
+    this.submitIssue.addEventListener("click", async (e) => {
+      try {
+        console.log("was clicked!!!!");
+        e.preventDefault();
+        await addIssueForm(
+          this.issueForm.select_issue.value,
+          this.issueForm.issue_comments.value
+        );
+        alert("Report Submitted!");
+      } catch (e) {
+        console.log(e);
+        alert(e);
+      }
+    });
     this.modal = document.querySelector(".modal");
     this.printForm = document.querySelector(".printForm");
     this.selectColored = document.getElementById("select-colored");
@@ -472,7 +505,7 @@ export default class Panel {
     this._clear(this.modal);
     const pincodeMarkup = `
     <div class="modal__section modal__text">
-      <p>Please proceed to the machine and enter this to get your document:</p>
+      <p>Please proceed to the machine and enter this PIN to get your document:</p>
     </div>
     <div class="modal__section modal__img">
       <p class="modal__img_text">${formatPincode(getPincodeForm)}</p>

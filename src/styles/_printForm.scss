@@ -1,3 +1,16 @@
+.issues {
+  font-size: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  width: 35rem;
+  margin: 0 auto;
+}
+.issuebtn {
+  font-weight: 800;
+  padding: 1rem 2rem;
+  margin-top: 1rem;
+  width: 15rem;
+}
 .priceTable {
   margin-top: 2rem;
   border: 1px solid $color-primary;
